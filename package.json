@@ -1,0 +1,52 @@
+{
+  "name": "vulkan-digital-twin",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "vite build",
+    "lint": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^10.0.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.4.2",
+    "@tailwindcss/cli": "^4.2.1",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.0.0",
+    "axios": "^1.7.9",
+    "express": "^5.2.1",
+    "lucide-react": "^0.556.0",
+    "multer": "^2.0.2",
+    "postcss": "^8.5.8",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "recharts": "^3.5.1",
+    "tailwindcss": "^4.2.1",
+    "three": "^0.181.2",
+    "transparent": "^0.0.1",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  },
+  "description": "本專案是一套專為製造業設計的數字孿生（Digital Twin）與 MES 管理系統，採用 **Tailwind CSS v4** 最新架構開發。",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yl30235839-hub/MesManagement.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yl30235839-hub/MesManagement/issues"
+  },
+  "homepage": "https://github.com/yl30235839-hub/MesManagement#readme"
+}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vulkan Digital Twin System</title>
+    <!-- 內置 Favicon 避免 404 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏭</text></svg>">
+    
+    <!-- 生產環境編譯後的 CSS (Tailwind v4) -->
+    <link href="./dist/output.css" rel="stylesheet">
+    
+    <!-- 開發環境備用 CDN (若 dist/output.css 不存在時使用) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script type="importmap">
+{
+  "imports": {
+    "react": "./assets/lib/react.js",
+    "react-dom/": "./assets/lib/react-dom/",
+    "react-dom": "./assets/lib/react-dom.js",
+    "lucide-react": "./assets/lib/lucide-react.js",
+    "three": "./assets/lib/three.js",
+    "@react-three/fiber": "./assets/lib/react-three-fiber.js",
+    "@react-three/drei": "./assets/lib/react-three-drei.js",
+    "recharts": "./assets/lib/recharts.js",
+    "axios": "./assets/lib/axios.js"
+  }
+}
+</script>
+  <link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <!-- 關鍵：載入 React 入口文件 -->
+    <script type="module" src="./index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
