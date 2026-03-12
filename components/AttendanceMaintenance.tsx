@@ -233,10 +233,26 @@ const AttendanceMaintenance: React.FC<AttendanceMaintenanceProps> = ({
 
     setIsImporting(true);
     try {
+      // 嘗試獲取文件完整路徑 (Electron 環境下通常有 path 屬性)
+      let fullPath = (file as any).path || (file as any).fullName;
+      
+      // 在標準瀏覽器環境下，基於安全限制無法獲取完整路徑，此時彈出提示框讓用戶手動輸入
+      if (!fullPath) {
+        fullPath = prompt(
+          '由於瀏覽器安全限制，無法自動獲取文件的完整絕對路徑。\n\n請手動輸入該 Excel 文件的完整路徑\n(例如: D:\\Mes\\documents\\FACA需求文档\\BatchImport.xlsx):', 
+          file.name
+        );
+        
+        if (!fullPath) {
+          setIsImporting(false);
+          return; // 用戶取消輸入
+        }
+      }
+
       const response = await api.post('https://localhost:7044/api/CheckIn/BatchAddUser', {
         lineSystemName: lineId || "",
         equipmentSystemName: deviceId || "",
-        fileLocation: (file as any).fullName || (file as any).path || (file as any).webkitRelativePath || file.name
+        fileLocation: fullPath
       });
 
       const { code, message, data } = response.data;
@@ -306,25 +322,10 @@ const AttendanceMaintenance: React.FC<AttendanceMaintenanceProps> = ({
         userId: person.employeeId
       });
       
-      const { code, message, data } = response.data;
+      const { code, message } = response.data;
       
-      if (code === 200 && data?.user) {
-        const user = data.user;
-        const mappedPerson: Personnel = {
-          id: user.UserID,
-          name: user.UserName,
-          employeeId: user.UserID,
-          department: user.Department,
-          position: user.UserJobName,
-          techLevel: user.UserLevel,
-          hasFingerprint1: !!(user.FingerprintInfoA && (Array.isArray(user.FingerprintInfoA) ? user.FingerprintInfoA.length > 0 : true)),
-          hasFingerprint2: !!(user.FingerprintInfoB && (Array.isArray(user.FingerprintInfoB) ? user.FingerprintInfoB.length > 0 : true)),
-          extraPermissions: {
-            keyPersonnel: !!user.KeyPersonnel,
-            mobilePersonnel: !!user.MobilePersonnel,
-          }
-        };
-        onGoToRegister(mappedPerson);
+      if (code === 200) {
+        onGoToRegister(person);
       } else {
         showNotification(`編輯請求失敗: ${message || '未知錯誤'} (代碼: ${code})`, 'error');
       }
