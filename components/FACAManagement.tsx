@@ -11,6 +11,22 @@ import {
   MessageSquare, Sparkles
 } from 'lucide-react';
 
+interface FACALibrary {
+  AlarmLevel1: string;
+  PrimarCode: string;
+  AlarmLevel2: string;
+  SecondaryCode: string;
+  AlarmLevel3: string;
+  AlarmCode: string;
+  FaultClassification: string;
+  CategoryTag1: string;
+  FaultDescription: string;
+  CategoryTag2: string;
+  FailureReason: string;
+  FailureSolution: string;
+  LongTermSolution: string;
+}
+
 interface FACASolution {
   id: string;
   category: string;
@@ -59,18 +75,50 @@ const formatNow = () => {
   return `${y}/${m}/${d} ${h}:${mm}:${ss}`;
 };
 
+const formatDisplayDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  return dateStr.split(/[T ]/)[0];
+};
+
+const formatDisplayTime = (timeStr: string) => {
+  if (!timeStr) return '';
+  const parts = timeStr.split(/[T ]/);
+  if (parts.length > 1) {
+    return parts[1].split('.')[0];
+  }
+  return timeStr;
+};
+
+const formatInputTime = (timeStr: string) => {
+  if (!timeStr) return '';
+  const parts = timeStr.split(/[T ]/);
+  let timePart = parts.length > 1 ? parts[1] : timeStr;
+  return timePart.split('.')[0];
+};
+
 interface FACAManagementProps {
   onBack: () => void;
   pendingItems: FACAPendingItem[];
   setPendingItems: React.Dispatch<React.SetStateAction<FACAPendingItem[]>>;
+  currentUsername: string;
+  personnelList: any[];
 }
 
-const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, setPendingItems }) => {
+const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, setPendingItems, currentUsername, personnelList }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [appliedSolutionId, setAppliedSolutionId] = useState<string | null>(null);
   const [isOtherFault, setIsOtherFault] = useState(false);
   
+  // Find current user info
+  const currentUser = useMemo(() => {
+    return personnelList.find(p => p.name === currentUsername || p.employeeId === currentUsername) || {
+      name: currentUsername || '張工程師',
+      employeeId: 'V1024',
+      department: '工程部'
+    };
+  }, [currentUsername, personnelList]);
+
   // Modal State
   const [isPartsModalOpen, setIsPartsModalOpen] = useState(false);
   const [partsRecord, setPartsRecord] = useState<PartRecord | null>(null);
@@ -92,43 +140,135 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
 
   // Form State
   const [facaForm, setFacaForm] = useState({
-    handlerName: '張工程師',
-    handlerId: 'V1024',
-    handlerDept: '工程部',
+    handlerName: currentUser.name,
+    handlerId: currentUser.employeeId,
+    handlerDept: currentUser.department,
     repairStart: '',
     repairEnd: '',
-    cat1: '機械故障',
-    cat2: '伺服系統',
-    cat3: '電機過熱',
-    tag1: '緊急修復',
-    tag2: '零件更換',
+    cat1: '',
+    cat2: '',
+    cat3: '',
+    tag1: '',
+    tag2: '',
     faDetail: '',
     caDetail: ''
   });
 
-  const filteredSolutions = useMemo(() => {
-    if (!selectedItem) return [];
-    return MOCK_FACA_SOLUTIONS.filter(s => s.alarmCodeRef === selectedItem.alarmCode || s.category.includes(facaForm.cat1));
-  }, [selectedItem, facaForm.cat1]);
+  // Update form when currentUser changes
+  useEffect(() => {
+    setFacaForm(prev => ({
+      ...prev,
+      handlerName: currentUser.name,
+      handlerId: currentUser.employeeId,
+      handlerDept: currentUser.department,
+    }));
+  }, [currentUser]);
 
-  const handleSelectItem = (item: FACAPendingItem) => {
+  const [facaLibraryData, setFacaLibraryData] = useState<FACALibrary[]>([]);
+  const [isLoadingFaca, setIsLoadingFaca] = useState(false);
+
+  const cat3Options = useMemo(() => {
+    const options = facaLibraryData.map(item => item.AlarmLevel3).filter(Boolean);
+    return Array.from(new Set(options));
+  }, [facaLibraryData]);
+
+  const tag1Options = useMemo(() => {
+    if (!facaForm.cat3) return [];
+    const filtered = facaLibraryData.filter(item => item.AlarmLevel3 === facaForm.cat3);
+    const options = filtered.map(item => item.CategoryTag1).filter(Boolean);
+    return Array.from(new Set(options));
+  }, [facaLibraryData, facaForm.cat3]);
+
+  const tag2Options = useMemo(() => {
+    if (!facaForm.cat3 || !facaForm.tag1) return [];
+    const filtered = facaLibraryData.filter(item => 
+      item.AlarmLevel3 === facaForm.cat3 && 
+      item.CategoryTag1 === facaForm.tag1
+    );
+    const options = filtered.map(item => item.CategoryTag2).filter(Boolean);
+    return Array.from(new Set(options));
+  }, [facaLibraryData, facaForm.cat3, facaForm.tag1]);
+
+  const filteredSolutions = useMemo(() => {
+    if (!facaForm.cat3 || !facaForm.tag1 || !facaForm.tag2) return [];
+    
+    const filtered = facaLibraryData.filter(item => 
+      item.AlarmLevel3 === facaForm.cat3 && 
+      item.CategoryTag1 === facaForm.tag1 &&
+      item.CategoryTag2 === facaForm.tag2
+    );
+    
+    return filtered.map((item, index) => ({
+      id: `S-${item.AlarmCode}-${index}`,
+      category: item.FaultClassification || '',
+      description: item.FaultDescription || '',
+      reason: item.FailureReason || '',
+      action: item.FailureSolution || '',
+      alarmCodeRef: item.AlarmCode || ''
+    }));
+  }, [facaLibraryData, facaForm.cat3, facaForm.tag1, facaForm.tag2]);
+
+  const handleSelectItem = async (item: FACAPendingItem) => {
+    if (isLoadingFaca) return;
+    
     setSelectedId(item.id);
     setAppliedSolutionId(null);
     setIsOtherFault(false);
     setPartsRecord(null);
-    // 模擬自動解析分類
-    const mockCat1 = item.alarmCode.startsWith('E') ? '電器故障' : item.alarmCode.startsWith('W') ? '工藝問題' : '機械故障';
-    const mockCat2 = item.alarmCode.startsWith('E') ? '伺服系統' : '傳感器';
     
     setFacaForm(prev => ({
       ...prev,
-      repairStart: item.startTime,
-      repairEnd: item.endTime,
+      repairStart: formatInputTime(item.startTime),
+      repairEnd: formatInputTime(item.endTime),
       faDetail: '',
       caDetail: '',
-      cat1: mockCat1,
-      cat2: mockCat2
+      cat1: '',
+      cat2: '',
+      cat3: '',
+      tag1: '',
+      tag2: ''
     }));
+
+    setIsLoadingFaca(true);
+    try {
+      const response = await fetch('https://localhost:7044/api/FACA/ClickAlarm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ alarmCode: item.alarmCode })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      if (result.code === 200 && result.data && result.data.fACALibrary) {
+        const library: FACALibrary[] = result.data.fACALibrary;
+        setFacaLibraryData(library);
+        
+        if (library.length > 0) {
+          const firstItem = library[0];
+          setFacaForm(prev => ({
+            ...prev,
+            cat1: firstItem.AlarmLevel1 || '',
+            cat2: firstItem.AlarmLevel2 || '',
+            cat3: '',
+            tag1: '',
+            tag2: ''
+          }));
+        }
+      } else {
+        throw new Error(result.message || '獲取 FACA 數據失敗');
+      }
+    } catch (error) {
+      console.error('Error fetching FACA library:', error);
+      alert(`獲取 FACA 數據失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+      setFacaLibraryData([]);
+    } finally {
+      setIsLoadingFaca(false);
+    }
   };
 
   const applySolution = (solution: FACASolution) => {
@@ -136,7 +276,6 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
     setIsOtherFault(false);
     setFacaForm(prev => ({
       ...prev,
-      cat1: solution.category,
       faDetail: solution.reason,
       caDetail: solution.action
     }));
@@ -226,27 +365,31 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
           <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50/50 custom-scrollbar">
             {pendingItems.length > 0 ? (
               pendingItems.map(item => (
-                <div 
+                <button 
                   key={item.id} 
+                  disabled={isLoadingFaca && selectedId === item.id}
                   onClick={() => handleSelectItem(item)}
-                  className={`p-4 rounded-xl border-2 transition-all cursor-pointer group hover:shadow-md ${selectedId === item.id ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-[1.02]' : 'bg-white border-slate-100 text-slate-600'}`}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer group hover:shadow-md ${selectedId === item.id ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-[1.02]' : 'bg-white border-slate-100 text-slate-600'} ${(isLoadingFaca && selectedId === item.id) ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${selectedId === item.id ? 'bg-blue-400 text-white' : 'bg-slate-100 text-slate-500'}`}>
                       {item.alarmCode}
                     </span>
-                    <span className={`text-[10px] ${selectedId === item.id ? 'text-blue-100' : 'text-slate-400'} font-mono`}>{item.date}</span>
+                    <span className={`text-[10px] ${selectedId === item.id ? 'text-blue-100' : 'text-slate-400'} font-mono`}>{formatDisplayDate(item.date)}</span>
                   </div>
-                  <h4 className={`font-bold text-sm ${selectedId === item.id ? 'text-white' : 'text-slate-800'}`}>{item.machineName}</h4>
+                  <h4 className={`font-bold text-sm ${selectedId === item.id ? 'text-white' : 'text-slate-800'}`}>
+                    {item.machineName}
+                    {isLoadingFaca && selectedId === item.id && <span className="ml-2 text-xs text-blue-200">處理中...</span>}
+                  </h4>
                   <p className={`text-xs mt-1 truncate ${selectedId === item.id ? 'text-blue-100' : 'text-slate-500'}`}>{item.alarmContent}</p>
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center space-x-2 text-[10px]">
                       <Clock size={12} />
-                      <span>{item.startTime} - {item.endTime}</span>
+                      <span>{formatDisplayTime(item.startTime)} - {formatDisplayTime(item.endTime)}</span>
                     </div>
                     <ChevronRight size={14} className={selectedId === item.id ? 'text-white' : 'text-slate-300'} />
                   </div>
-                </div>
+                </button>
               ))
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center space-y-4">
@@ -414,7 +557,7 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                         value={facaForm.cat1} 
                         className="w-full p-3 border border-slate-200 rounded-xl outline-none bg-slate-100 text-slate-500 text-sm cursor-not-allowed"
                       >
-                        {CLASSIFICATION_OPTIONS.level1.map(opt => <option key={opt}>{opt}</option>)}
+                        <option value={facaForm.cat1}>{facaForm.cat1}</option>
                       </select>
                     </div>
                     <div>
@@ -424,13 +567,18 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                         value={facaForm.cat2} 
                         className="w-full p-3 border border-slate-200 rounded-xl outline-none bg-slate-100 text-slate-500 text-sm cursor-not-allowed"
                       >
-                        {CLASSIFICATION_OPTIONS.level2.map(opt => <option key={opt}>{opt}</option>)}
+                        <option value={facaForm.cat2}>{facaForm.cat2}</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase">三級分類</label>
-                      <select value={facaForm.cat3} onChange={(e) => setFacaForm({...facaForm, cat3: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
-                        {CLASSIFICATION_OPTIONS.level3.map(opt => <option key={opt}>{opt}</option>)}
+                      <select 
+                        value={facaForm.cat3} 
+                        onChange={(e) => setFacaForm({...facaForm, cat3: e.target.value, tag1: '', tag2: ''})} 
+                        className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                      >
+                        <option value="">請選擇三級分類</option>
+                        {cat3Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
                     </div>
                   </div>
@@ -441,16 +589,16 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                         <BarChart2 size={12} className="mr-1" /> 分類標籤 1
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {CLASSIFICATION_OPTIONS.tags.slice(0, 3).map(tag => (
+                        {tag1Options.length > 0 ? tag1Options.map(tag => (
                           <button 
                             key={tag} 
                             type="button" 
-                            onClick={() => setFacaForm({...facaForm, tag1: tag})}
+                            onClick={() => setFacaForm({...facaForm, tag1: tag, tag2: ''})}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${facaForm.tag1 === tag ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-100'}`}
                           >
                             {tag}
                           </button>
-                        ))}
+                        )) : <span className="text-xs text-slate-400">請先選擇三級分類</span>}
                       </div>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -458,7 +606,7 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                         <BarChart2 size={12} className="mr-1" /> 分類標籤 2
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {CLASSIFICATION_OPTIONS.tags.slice(3).map(tag => (
+                        {tag2Options.length > 0 ? tag2Options.map(tag => (
                           <button 
                             key={tag} 
                             type="button" 
@@ -467,7 +615,7 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                           >
                             {tag}
                           </button>
-                        ))}
+                        )) : <span className="text-xs text-slate-400">請先選擇分類標籤 1</span>}
                       </div>
                     </div>
                   </div>

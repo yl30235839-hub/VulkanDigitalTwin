@@ -364,6 +364,8 @@ interface Line3DViewProps {
   onOpenFACA: () => void;
   facaPendingItems: FACAPendingItem[];
   setFacaPendingItems: React.Dispatch<React.SetStateAction<FACAPendingItem[]>>;
+  isMonitoring: boolean;
+  setIsMonitoring: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Line3DView: React.FC<Line3DViewProps> = ({ 
@@ -372,9 +374,10 @@ const Line3DView: React.FC<Line3DViewProps> = ({
   onOpenAttendance, 
   onOpenFACA,
   facaPendingItems,
-  setFacaPendingItems
+  setFacaPendingItems,
+  isMonitoring,
+  setIsMonitoring
 }) => {
-  const [isMonitoring, setIsMonitoring] = useState(false);
   const [isRunningLoading, setIsRunningLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Equipment | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -438,6 +441,74 @@ const Line3DView: React.FC<Line3DViewProps> = ({
     // Listener is now managed via handleStartClockIn and handleStopClockIn
   }, [isScanning, selectedItem]);
 
+  useEffect(() => {
+    if (!connection) return;
+
+    if (isMonitoring) {
+      console.log("Registering EquipmentStatus listener...");
+      connection.on('EquipmentStatus', (data: { lineSystemName: string, equipmentSystemName: string, equipmentStatus: number }) => {
+        console.log("Received EquipmentStatus update:", data);
+        
+        setLocalEquipmentList(prevList => {
+          return prevList.map(item => {
+            if (item.name === data.equipmentSystemName) {
+              let newStatus: MachineStatus;
+              switch (data.equipmentStatus) {
+                case 1:
+                  newStatus = MachineStatus.Warning; // Idle (Yellow)
+                  break;
+                case 2:
+                  newStatus = MachineStatus.Running; // Running (Green)
+                  break;
+                default:
+                  newStatus = MachineStatus.Stopped; // Error (Red)
+                  break;
+              }
+              const updatedItem = { ...item, status: newStatus };
+              
+              setSelectedItem(prevSelected => {
+                if (prevSelected && prevSelected.id === item.id) {
+                  return updatedItem;
+                }
+                return prevSelected;
+              });
+              
+              return updatedItem;
+            }
+            return item;
+          });
+        });
+      });
+
+      console.log("Registering FACATips listener...");
+      connection.on('FACATips', (data: FACATipsMessage) => {
+        console.log("Received FACATips update:", data);
+        
+        const newPendingItems: FACAPendingItem[] = data.alarmNew.map((alarm, index) => ({
+          id: `F-${Date.now()}-${index}`,
+          date: alarm.AlarmStartTime,
+          startTime: alarm.AlarmStartTime,
+          endTime: alarm.AlarmEndTime,
+          machineName: data.equipmentSystemName,
+          alarmCode: alarm.AlarmCode,
+          alarmContent: alarm.AlarmNote,
+          status: 'AWAITING'
+        }));
+
+        setFacaPendingItems(prev => [...prev, ...newPendingItems]);
+      });
+    } else {
+      console.log("Unregistering listeners...");
+      connection.off('EquipmentStatus');
+      connection.off('FACATips');
+    }
+
+    return () => {
+      connection.off('EquipmentStatus');
+      connection.off('FACATips');
+    };
+  }, [isMonitoring, connection, setFacaPendingItems]);
+
   /**
    * HTTP POST: Run/Running Process
    */
@@ -450,79 +521,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
       const { code, message } = response.data;
       
       if (code === 200) {
-        const nextMonitoringState = !isMonitoring;
-        setIsMonitoring(nextMonitoringState);
-
-        // SignalR: EquipmentStatus Listener Management
-        if (connection) {
-          if (nextMonitoringState) {
-            console.log("Registering EquipmentStatus listener...");
-            connection.on('EquipmentStatus', (data: { lineSystemName: string, equipmentSystemName: string, equipmentStatus: number }) => {
-              console.log("Received EquipmentStatus update:", data);
-              
-              setLocalEquipmentList(prevList => {
-                return prevList.map(item => {
-                  // Assuming item.lineId or some other property matches lineSystemName/equipmentSystemName
-                  // Based on typical patterns, we might need to match by name or a specific system name field
-                  // For now, let's assume item.name or item.id matches equipmentSystemName
-                  if (item.name === data.equipmentSystemName) {
-                    let newStatus: MachineStatus;
-                    switch (data.equipmentStatus) {
-                      case 1:
-                        newStatus = MachineStatus.Warning; // Idle (Yellow)
-                        break;
-                      case 2:
-                        newStatus = MachineStatus.Running; // Running (Green)
-                        break;
-                      default:
-                        newStatus = MachineStatus.Stopped; // Error (Red)
-                        break;
-                    }
-                    const updatedItem = { ...item, status: newStatus };
-                    
-                    // Also update selectedItem if it's the one being updated
-                    setSelectedItem(prevSelected => {
-                      if (prevSelected && prevSelected.id === item.id) {
-                        return updatedItem;
-                      }
-                      return prevSelected;
-                    });
-                    
-                    return updatedItem;
-                  }
-                  return item;
-                });
-              });
-            });
-          } else {
-            console.log("Unregistering EquipmentStatus listener...");
-            connection.off('EquipmentStatus');
-          }
-
-          // SignalR: FACATips Listener Management
-          if (nextMonitoringState) {
-            console.log("Registering FACATips listener...");
-            connection.on('FACATips', (data: FACATipsMessage) => {
-              console.log("Received FACATips update:", data);
-              
-              const newPendingItems: FACAPendingItem[] = data.alarmNew.map((alarm, index) => ({
-                id: `F-${Date.now()}-${index}`,
-                date: new Date(alarm.AlarmStartTime).toISOString().slice(0, 10),
-                startTime: new Date(alarm.AlarmStartTime).toLocaleTimeString(),
-                endTime: new Date(alarm.AlarmEndTime).toLocaleTimeString(),
-                machineName: data.equipmentSystemName,
-                alarmCode: alarm.AlarmCode,
-                alarmContent: alarm.AlarmNote,
-                status: 'AWAITING'
-              }));
-
-              setFacaPendingItems(prev => [...prev, ...newPendingItems]);
-            });
-          } else {
-            console.log("Unregistering FACATips listener...");
-            connection.off('FACATips');
-          }
-        }
+        setIsMonitoring(!isMonitoring);
       } else if (code === 404) {
         alert(`運行失敗: ${message || '找不到資源 (404)'}`);
       } else {

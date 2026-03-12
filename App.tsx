@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [selectedLineData, setSelectedLineData] = useState<any>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  const [currentUsername, setCurrentUsername] = useState<string>('');
   
   // Lifted State - Initially from constants
   const [factoryInfo, setFactoryInfo] = useState({ code: 'GL', floor: '3F' });
@@ -26,14 +27,17 @@ const App: React.FC = () => {
   const [facaPendingItems, setFacaPendingItems] = useState<FACAPendingItem[]>([]);
   const [personnelList, setPersonnelList] = useState<Personnel[]>(INITIAL_PERSONNEL);
   const [editingPersonnel, setEditingPersonnel] = useState<Personnel | null>(null);
+  const [isMonitoring, setIsMonitoring] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = (username: string) => {
     setIsAuthenticated(true);
-    setCurrentPage('LINES');
+    setCurrentUsername(username);
+    setCurrentPage(username === 'admin' ? 'LINES' : '3D_VIEW');
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    setCurrentUsername('');
     setCurrentPage('LOGIN');
     setSelectedLineId(null);
     setSelectedDeviceId(null);
@@ -196,6 +200,8 @@ const App: React.FC = () => {
             onOpenFACA={handleGoToFACA} 
             facaPendingItems={facaPendingItems}
             setFacaPendingItems={setFacaPendingItems}
+            isMonitoring={isMonitoring}
+            setIsMonitoring={setIsMonitoring}
           />
         );
       case 'ATTENDANCE_MAINTENANCE':
@@ -215,6 +221,8 @@ const App: React.FC = () => {
             onBack={() => setCurrentPage('3D_VIEW')} 
             pendingItems={facaPendingItems}
             setPendingItems={setFacaPendingItems}
+            currentUsername={currentUsername}
+            personnelList={personnelList}
           />
         );
       case 'REGISTER':
@@ -273,7 +281,7 @@ const App: React.FC = () => {
           currentPage={currentPage} 
           onNavigate={handleNavigate} 
           onLogout={handleLogout}
-          userName="張經理"
+          userName={currentUsername || "張經理"}
         >
           {renderContent()}
         </Layout>

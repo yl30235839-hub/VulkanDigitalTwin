@@ -21,7 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = [
-    { id: 'LINES' as PageView, label: '工廠管理', icon: Layers },
+    ...(userName === 'admin' ? [{ id: 'LINES' as PageView, label: '工廠管理', icon: Layers }] : []),
     { id: '3D_VIEW' as PageView, label: '產綫 3D 監控', icon: Box },
   ];
 
@@ -76,7 +76,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
             {!collapsed && (
               <div className="ml-3 overflow-hidden">
                 <p className="text-sm font-medium text-white truncate">{userName}</p>
-                <p className="text-xs text-slate-400">System Admin</p>
+                <p className="text-xs text-slate-400">{userName === 'admin' ? 'System Admin' : 'User'}</p>
               </div>
             )}
             {!collapsed && (

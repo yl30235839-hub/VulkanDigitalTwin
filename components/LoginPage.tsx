@@ -3,7 +3,7 @@ import { KeyRound, User, Lock, ArrowRight } from 'lucide-react';
 import api from '../services/api';
 
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: (username: string) => void;
   onGoToRegister: () => void;
 }
 
@@ -24,7 +24,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister }) => {
         // Simulate a small delay for better UX
         await new Promise(resolve => setTimeout(resolve, 500));
         localStorage.setItem('mes_token', 'admin_token_bypass');
-        onLogin();
+        onLogin(username);
       } finally {
         setLoading(false);
       }
@@ -43,7 +43,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister }) => {
       if (data && data.result === 1) {
         // Success Handling
         localStorage.setItem('mes_token', `token_${username}`);
-        onLogin();
+        onLogin(username);
       } else {
         // Failure Handling (result === 0)
         setError(message || '賬號或密碼錯誤，要求用戶重新輸入。');
