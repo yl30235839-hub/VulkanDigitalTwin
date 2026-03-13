@@ -242,23 +242,58 @@ const TVDashboard: React.FC<{
   position: [number, number, number], 
   rotation?: [number, number, number],
   isSelected: boolean,
-  onClick: (data: Equipment) => void
-}> = ({ position, rotation = [0, 0, 0], isSelected, onClick }) => {
+  onClick: (data: Equipment) => void,
+  dashboardType?: 'oee' | 'yield' | 'scrap'
+}> = ({ position, rotation = [0, 0, 0], isSelected, onClick, dashboardType = 'oee' }) => {
   const [hovered, setHovered] = useState(false);
 
   const tvData: Equipment = {
-    id: 'tv-dashboard-01',
+    id: `tv-dashboard-${dashboardType}`,
     lineId: 'GLOBAL',
-    name: '車間OEE數字看板',
+    name: dashboardType === 'oee' ? '車間OEE數字看板' : dashboardType === 'yield' ? '良率分析數字看板' : '抛料率分析數字看板',
     type: EquipmentType.TVDashboard,
-    description: '顯示車間整體OEE數據及各產線效率對比',
+    description: dashboardType === 'oee' ? '顯示車間整體OEE數據及各產線效率對比' : dashboardType === 'yield' ? '顯示車間整體良率數據及各產線良率對比' : '顯示車間整體抛料率數據及各產線抛料率對比',
     status: MachineStatus.Running,
     temperature: 24,
     vibration: 0,
     lastMaintenance: new Date().toISOString().split('T')[0],
-    sn: 'SONY-Y75XR90-001',
+    sn: `SONY-Y75XR90-${dashboardType.toUpperCase()}`,
     factoryArea: 'GL',
     floor: '3F'
+  };
+
+  const getHeader = () => {
+    if (dashboardType === 'oee') return 'Workshop OEE Dashboard';
+    if (dashboardType === 'yield') return 'Yield Analysis Dashboard';
+    return 'Scrap Rate Dashboard';
+  };
+
+  const getMainStatLabel = () => {
+    if (dashboardType === 'oee') return 'Overall Equipment Effectiveness';
+    if (dashboardType === 'yield') return 'Overall Yield Rate';
+    return 'Overall Scrap Rate';
+  };
+
+  const getMainStatValue = () => {
+    if (dashboardType === 'oee') return '87.5%';
+    if (dashboardType === 'yield') return '98.5%';
+    return '1.2%';
+  };
+
+  const getMainStatColor = () => {
+    if (dashboardType === 'scrap') return '#f87171';
+    return '#22c55e';
+  };
+
+  const getTrendText = () => {
+    if (dashboardType === 'oee') return '▲ 2.1% from yesterday';
+    if (dashboardType === 'yield') return '▲ 0.5% from yesterday';
+    return '▼ 0.3% from yesterday';
+  };
+
+  const getTrendColor = () => {
+    if (dashboardType === 'scrap') return '#22c55e'; // Lower is better
+    return '#22c55e';
   };
 
   return (
@@ -304,35 +339,77 @@ const TVDashboard: React.FC<{
       <group position={[0, 0, 0.07]}>
         {/* Header */}
         <Text position={[0, 5.5, 0]} fontSize={0.8} color="#38bdf8" anchorX="center" anchorY="middle">
-          Workshop OEE Dashboard
+          {getHeader()}
         </Text>
 
         {/* OEE Main Stat */}
         <group position={[-6, 1.5, 0]}>
-          <Text position={[0, 2, 0]} fontSize={0.5} color="#94a3b8" anchorX="center">Overall Equipment Effectiveness</Text>
-          <Text position={[0, 0, 0]} fontSize={3.5} color="#22c55e" anchorX="center">87.5%</Text>
-          <Text position={[0, -2, 0]} fontSize={0.4} color="#22c55e" anchorX="center">▲ 2.1% from yesterday</Text>
+          <Text position={[0, 2, 0]} fontSize={0.5} color="#94a3b8" anchorX="center">{getMainStatLabel()}</Text>
+          <Text position={[0, 0, 0]} fontSize={3.5} color={getMainStatColor()} anchorX="center">{getMainStatValue()}</Text>
+          <Text position={[0, -2, 0]} fontSize={0.4} color={getTrendColor()} anchorX="center">{getTrendText()}</Text>
         </group>
 
         {/* Sub Stats */}
-        <group position={[5, 1.5, 0]}>
-          <group position={[-3.5, 1.5, 0]}>
-            <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Availability</Text>
-            <Text position={[0, 0, 0]} fontSize={1.2} color="#38bdf8" anchorX="center">92.0%</Text>
+        {dashboardType === 'oee' && (
+          <group position={[5, 1.5, 0]}>
+            <group position={[-3.5, 1.5, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Availability</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#38bdf8" anchorX="center">92.0%</Text>
+            </group>
+            <group position={[3.5, 1.5, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Performance</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#facc15" anchorX="center">98.2%</Text>
+            </group>
+            <group position={[-3.5, -2, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Quality</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#22c55e" anchorX="center">96.8%</Text>
+            </group>
+            <group position={[3.5, -2, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Target</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#f87171" anchorX="center">85.0%</Text>
+            </group>
           </group>
-          <group position={[3.5, 1.5, 0]}>
-            <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Performance</Text>
-            <Text position={[0, 0, 0]} fontSize={1.2} color="#facc15" anchorX="center">98.2%</Text>
+        )}
+        {dashboardType === 'yield' && (
+          <group position={[5, 1.5, 0]}>
+            <group position={[-3.5, 1.5, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">FPY</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#38bdf8" anchorX="center">95.2%</Text>
+            </group>
+            <group position={[3.5, 1.5, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">SPY</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#22c55e" anchorX="center">99.1%</Text>
+            </group>
+            <group position={[-3.5, -2, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Defect Rate</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#facc15" anchorX="center">1.5%</Text>
+            </group>
+            <group position={[3.5, -2, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Target</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#f87171" anchorX="center">98.0%</Text>
+            </group>
           </group>
-          <group position={[-3.5, -2, 0]}>
-            <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Quality</Text>
-            <Text position={[0, 0, 0]} fontSize={1.2} color="#22c55e" anchorX="center">96.8%</Text>
+        )}
+        {dashboardType === 'scrap' && (
+          <group position={[5, 1.5, 0]}>
+            <group position={[-3.5, 1.5, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Component A</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#f87171" anchorX="center">2.1%</Text>
+            </group>
+            <group position={[3.5, 1.5, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Component B</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#facc15" anchorX="center">0.8%</Text>
+            </group>
+            <group position={[-3.5, -2, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Component C</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#22c55e" anchorX="center">0.3%</Text>
+            </group>
+            <group position={[3.5, -2, 0]}>
+              <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Target</Text>
+              <Text position={[0, 0, 0]} fontSize={1.2} color="#38bdf8" anchorX="center">&lt; 1.5%</Text>
+            </group>
           </group>
-          <group position={[3.5, -2, 0]}>
-            <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Target</Text>
-            <Text position={[0, 0, 0]} fontSize={1.2} color="#f87171" anchorX="center">85.0%</Text>
-          </group>
-        </group>
+        )}
 
         {/* Bottom Chart / Bars */}
         <group position={[0, -3.5, 0]}>
@@ -341,21 +418,27 @@ const TVDashboard: React.FC<{
             <planeGeometry args={[10, 0.6]} />
             <meshBasicMaterial color="#38bdf8" />
           </mesh>
-          <Text position={[2.5, 1, 0]} fontSize={0.4} color="#ffffff" anchorX="left">91%</Text>
+          <Text position={[2.5, 1, 0]} fontSize={0.4} color="#ffffff" anchorX="left">
+            {dashboardType === 'oee' ? '91%' : dashboardType === 'yield' ? '99.2%' : '1.0%'}
+          </Text>
 
           <Text position={[-10, -0.5, 0]} fontSize={0.4} color="#94a3b8" anchorX="left">Line B</Text>
           <mesh position={[-3.5, -0.5, 0]}>
             <planeGeometry args={[9, 0.6]} />
             <meshBasicMaterial color="#facc15" />
           </mesh>
-          <Text position={[1.5, -0.5, 0]} fontSize={0.4} color="#ffffff" anchorX="left">84%</Text>
+          <Text position={[1.5, -0.5, 0]} fontSize={0.4} color="#ffffff" anchorX="left">
+            {dashboardType === 'oee' ? '84%' : dashboardType === 'yield' ? '97.5%' : '1.5%'}
+          </Text>
 
           <Text position={[-10, -2, 0]} fontSize={0.4} color="#94a3b8" anchorX="left">Line C</Text>
           <mesh position={[-2, -2, 0]}>
             <planeGeometry args={[12, 0.6]} />
             <meshBasicMaterial color="#22c55e" />
           </mesh>
-          <Text position={[4.5, -2, 0]} fontSize={0.4} color="#ffffff" anchorX="left">95%</Text>
+          <Text position={[4.5, -2, 0]} fontSize={0.4} color="#ffffff" anchorX="left">
+            {dashboardType === 'oee' ? '95%' : dashboardType === 'yield' ? '98.8%' : '1.1%'}
+          </Text>
         </group>
       </group>
     </group>
@@ -376,8 +459,8 @@ const FactoryScene: React.FC<{
     });
   }, [equipmentList, lines]);
 
-  const rowSpacing = 15;
-  const columnSpacing = 3;
+  const rowSpacing = 20;
+  const columnSpacing = 5;
 
   return (
     <>
@@ -400,7 +483,7 @@ const FactoryScene: React.FC<{
             <meshBasicMaterial color="#fbbf24" />
           </mesh>
         ))}
-        {[-40, -20, 0, 20, 40].map((x) => (
+        {[-80, -60, -40, -20, 0, 20, 40, 60, 80].map((x) => (
           <mesh key={`v-line-${x}`} position={[x, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[0.15, 200]} />
             <meshBasicMaterial color="#fbbf24" />
@@ -415,20 +498,33 @@ const FactoryScene: React.FC<{
           <planeGeometry args={[200, 30]} />
           <meshStandardMaterial color="#f1f5f9" />
         </mesh>
-        {/* TV Dashboard on Back Wall */}
+        {/* TV Dashboards on Back Wall */}
         <TVDashboard 
           position={[0, 15, -59.8]} 
-          isSelected={selectedId === 'tv-dashboard-01'} 
+          isSelected={selectedId === 'tv-dashboard-oee'} 
           onClick={onItemClick} 
+          dashboardType="oee"
+        />
+        <TVDashboard 
+          position={[-26, 15, -59.8]} 
+          isSelected={selectedId === 'tv-dashboard-yield'} 
+          onClick={onItemClick} 
+          dashboardType="yield"
+        />
+        <TVDashboard 
+          position={[26, 15, -59.8]} 
+          isSelected={selectedId === 'tv-dashboard-scrap'} 
+          onClick={onItemClick} 
+          dashboardType="scrap"
         />
 
         {/* Left Wall */}
-        <mesh position={[-60, 15, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[-100, 15, 0]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[200, 30]} />
           <meshStandardMaterial color="#f1f5f9" />
         </mesh>
         {/* Right Wall */}
-        <mesh position={[60, 15, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh position={[100, 15, 0]} rotation={[0, -Math.PI / 2, 0]}>
           <planeGeometry args={[200, 30]} />
           <meshStandardMaterial color="#f1f5f9" />
         </mesh>
@@ -439,7 +535,7 @@ const FactoryScene: React.FC<{
         return (
           <group key={line.id} position={[0, 0, rowIndex * -rowSpacing]}>
             <Text 
-              position={[-18, 0.5, 0]} 
+              position={[-24, 0.5, 0]} 
               fontSize={1.2} 
               color="#3b82f6" 
               anchorX="right" 
