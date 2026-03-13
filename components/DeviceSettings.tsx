@@ -94,14 +94,14 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
         factoryArea: device.factoryArea || '',
         floor: device.floor || '',
         fingerprintId: device.fingerprintId || '1',
-        ip: '192.168.1.100',
-        plcBrand: 'Inovance',
-        plcSeries: 'H5U',
-        plcPort: '8000',
-        plcProtocol: 'MC Protocol (TCP)',
-        plcStation: '1',
-        plcDataType: 'CDAB',
-        plcStringReverse: false,
+        ip: device.ip || '192.168.1.100',
+        plcBrand: device.plcBrand || 'Inovance',
+        plcSeries: device.plcSeries || 'H5U',
+        plcPort: device.plcPort || '8000',
+        plcProtocol: device.plcProtocol || 'MC Protocol (TCP)',
+        plcStation: device.plcStation || '1',
+        plcDataType: device.plcDataType || 'CDAB',
+        plcStringReverse: device.plcStringReverse || false,
         rack: '0',
         slot: '2',
         alarmAddress: device.alarmAddress || '',
@@ -667,7 +667,7 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
                     <Fingerprint size={14} className="mr-1.5 text-blue-500" /> 指紋儀編號
                   </label>
                   <select value={formData.fingerprintId} onChange={(e) => setFormData({...formData, fingerprintId: e.target.value})} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white transition-all">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => <option key={num} value={num.toString()}>{num}</option>)}
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => <option key={num} value={num.toString()}>{num === 0 ? '未指定 (0)' : num}</option>)}
                   </select>
                 </div>
                 <div className="md:col-span-2 space-y-1">

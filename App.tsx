@@ -58,7 +58,35 @@ const App: React.FC = () => {
     setCurrentPage('EQUIPMENT');
   };
 
-  const handleMaintainDevice = (deviceId: string) => {
+  const handleMaintainDevice = (deviceId: string, data?: any) => {
+    if (data) {
+      setAllEquipment(prev => prev.map(e => {
+        if (e.id === deviceId) {
+          return {
+            ...e,
+            name: data.equipmentName !== undefined && data.equipmentName !== null ? data.equipmentName : e.name,
+            description: data.description !== undefined && data.description !== null ? data.description : e.description,
+            equipmentSN: data.equipmentSN !== undefined && data.equipmentSN !== null ? data.equipmentSN : e.equipmentSN,
+            fingerprintId: data.fingerIndex !== undefined && data.fingerIndex !== null ? data.fingerIndex.toString() : e.fingerprintId,
+            ip: data.plcIP !== undefined && data.plcIP !== null ? data.plcIP : e.ip,
+            plcBrand: data.plcBrand !== undefined && data.plcBrand !== null ? data.plcBrand : e.plcBrand,
+            plcSeries: data.series !== undefined && data.series !== null ? data.series : e.plcSeries,
+            plcPort: data.plcPort !== undefined && data.plcPort !== null ? data.plcPort.toString() : e.plcPort,
+            plcStation: data.station !== undefined && data.station !== null ? data.station.toString() : e.plcStation,
+            plcDataType: data.dataType !== undefined && data.dataType !== null ? data.dataType : e.plcDataType,
+            plcStringReverse: data.isReverse !== undefined && data.isReverse !== null ? data.isReverse : e.plcStringReverse,
+            alarmAddress: data.alarmAddress !== undefined && data.alarmAddress !== null ? data.alarmAddress : e.alarmAddress,
+            alarmAddressLength: data.alarmAddressLength !== undefined && data.alarmAddressLength !== null ? data.alarmAddressLength : e.alarmAddressLength,
+            okCountAddress: data.oKCapacityAdd !== undefined && data.oKCapacityAdd !== null ? data.oKCapacityAdd : e.okCountAddress,
+            ngCountAddress: data.nGCapacityAdd !== undefined && data.nGCapacityAdd !== null ? data.nGCapacityAdd : e.ngCountAddress,
+            rejectCountAddress: data.throwCapacityAdd !== undefined && data.throwCapacityAdd !== null ? data.throwCapacityAdd : e.rejectCountAddress,
+            statusAddress: data.statusAdd !== undefined && data.statusAdd !== null ? data.statusAdd : e.statusAddress,
+            alarmEndAddress: data.alarmEndSignAdd !== undefined && data.alarmEndSignAdd !== null ? data.alarmEndSignAdd : e.alarmEndAddress
+          };
+        }
+        return e;
+      }));
+    }
     setSelectedDeviceId(deviceId);
     setCurrentPage('DEVICE_SETTINGS');
   }

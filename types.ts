@@ -58,6 +58,14 @@ export interface Equipment {
   sn?: string;
   fingerprintId?: string;
   // Communication fields for Assembly Equipment
+  ip?: string;
+  plcBrand?: string;
+  plcSeries?: string;
+  plcPort?: string;
+  plcProtocol?: string;
+  plcStation?: string;
+  plcDataType?: string;
+  plcStringReverse?: boolean;
   alarmAddress?: string;
   alarmAddressLength?: number;
   okCountAddress?: string;

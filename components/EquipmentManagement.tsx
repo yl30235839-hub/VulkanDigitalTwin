@@ -13,7 +13,7 @@ interface EquipmentManagementProps {
   lineData?: any;
   equipmentList: Equipment[];
   onAddEquipment: (equip: Equipment) => void;
-  onMaintainDevice?: (deviceId: string) => void;
+  onMaintainDevice?: (deviceId: string, data?: any) => void;
 }
 
 const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineData, equipmentList, onAddEquipment, onMaintainDevice }) => {
@@ -51,6 +51,7 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
 
   const [isSavingLine, setIsSavingLine] = useState(false);
   const [isAddingEquipment, setIsAddingEquipment] = useState(false);
+  const [loadingDeviceId, setLoadingDeviceId] = useState<string | null>(null);
 
   // Modal State for Adding Equipment
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -152,6 +153,49 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
       }
     } finally {
       setIsAddingEquipment(false);
+    }
+  };
+
+  const handleMaintainClick = async (equip: Equipment) => {
+    if (equip.type === EquipmentType.CheckinEquipment) {
+      setLoadingDeviceId(equip.id);
+      try {
+        const response = await api.post('https://localhost:7044/api/Equipment/EnterCEquipment', {
+          equipmentSystemName: equip.id
+        });
+        
+        if (response.data && response.data.code === 200) {
+          onMaintainDevice && onMaintainDevice(equip.id, response.data.data);
+        } else {
+          alert(response.data?.message || '獲取設備信息失敗');
+        }
+      } catch (error: any) {
+        alert(`請求失敗: ${error.message || '網絡錯誤，請稍後重試'}`);
+        console.error(error);
+      } finally {
+        setLoadingDeviceId(null);
+      }
+    } else if (equip.type === EquipmentType.AssemblyEquipment) {
+      setLoadingDeviceId(equip.id);
+      try {
+        const response = await api.post('https://localhost:7044/api/Equipment/EnterAEquipment', {
+          lineSystemName: equip.lineId,
+          equipmentSystemName: equip.id
+        });
+        
+        if (response.data && response.data.code === 200) {
+          onMaintainDevice && onMaintainDevice(equip.id, response.data.data);
+        } else {
+          alert(response.data?.message || '獲取設備信息失敗');
+        }
+      } catch (error: any) {
+        alert(`請求失敗: ${error.message || '網絡錯誤，請稍後重試'}`);
+        console.error(error);
+      } finally {
+        setLoadingDeviceId(null);
+      }
+    } else {
+      onMaintainDevice && onMaintainDevice(equip.id);
     }
   };
 
@@ -353,10 +397,23 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
                       維護: {equip.lastMaintenance}
                     </div>
                     <button 
-                      onClick={() => onMaintainDevice && onMaintainDevice(equip.id)}
-                      className="text-blue-600 hover:text-blue-800 font-medium flex items-center text-xs uppercase tracking-wide hover:underline"
+                      onClick={() => handleMaintainClick(equip)}
+                      disabled={loadingDeviceId === equip.id}
+                      className={`font-medium flex items-center text-xs uppercase tracking-wide transition-colors ${
+                        loadingDeviceId === equip.id 
+                          ? 'text-slate-400 cursor-not-allowed' 
+                          : 'text-blue-600 hover:text-blue-800 hover:underline'
+                      }`}
                     >
-                      <Settings size={14} className="mr-1" /> 維護設備
+                      {loadingDeviceId === equip.id ? (
+                        <>
+                          <RotateCw size={14} className="mr-1 animate-spin" /> 處理中...
+                        </>
+                      ) : (
+                        <>
+                          <Settings size={14} className="mr-1" /> 維護設備
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
