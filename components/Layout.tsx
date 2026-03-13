@@ -21,7 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = [
-    ...(userName === 'admin' ? [{ id: 'LINES' as PageView, label: '工廠管理', icon: Layers }] : []),
+    { id: 'LINES' as PageView, label: '工廠管理', icon: Layers },
     { id: '3D_VIEW' as PageView, label: '產綫 3D 監控', icon: Box },
   ];
 

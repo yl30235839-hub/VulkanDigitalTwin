@@ -8,7 +8,7 @@ import api from '../services/api';
 import { 
   X, Thermometer, Activity, Clock, Cpu, ChevronRight, Calendar, Truck, Layers,
   Play, Square, User, Hash, CheckCircle2, ClipboardEdit, Save, AlertCircle,
-  Scan, ShieldCheck, FileWarning, MessageSquare, Edit3, Fingerprint
+  Scan, ShieldCheck, FileWarning, MessageSquare, Edit3, Fingerprint, Monitor
 } from 'lucide-react';
 import { Equipment, MachineStatus, EquipmentType, FACAPendingItem, FACATipsMessage, AlarmRecordModel, ProductionLine } from '../types';
 
@@ -149,7 +149,7 @@ const MachineModel: React.FC<ItemProps> = ({ data, isSelected, onClick, position
   const [hovered, setHovered] = useState(false);
   
   return (
-    <group position={position} onClick={(e: any) => { e.stopPropagation(); onClick(data); }}>
+    <group position={position} scale={[2, 2, 2]} onClick={(e: any) => { e.stopPropagation(); onClick(data); }}>
       <group 
         onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto'; }}
@@ -200,7 +200,7 @@ const FingerprintModel: React.FC<ItemProps> = ({ data, isSelected, onClick, posi
   });
   
   return (
-    <group position={position} onClick={(e: any) => { e.stopPropagation(); onClick(data); }}>
+    <group position={position} scale={[2, 2, 2]} onClick={(e: any) => { e.stopPropagation(); onClick(data); }}>
       <group 
         onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }} 
         onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto'; }}
@@ -237,6 +237,130 @@ const FingerprintModel: React.FC<ItemProps> = ({ data, isSelected, onClick, posi
     </group>
   );
 }
+
+const TVDashboard: React.FC<{ 
+  position: [number, number, number], 
+  rotation?: [number, number, number],
+  isSelected: boolean,
+  onClick: (data: Equipment) => void
+}> = ({ position, rotation = [0, 0, 0], isSelected, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+
+  const tvData: Equipment = {
+    id: 'tv-dashboard-01',
+    lineId: 'GLOBAL',
+    name: '車間OEE數字看板',
+    type: EquipmentType.TVDashboard,
+    description: '顯示車間整體OEE數據及各產線效率對比',
+    status: MachineStatus.Running,
+    temperature: 24,
+    vibration: 0,
+    lastMaintenance: new Date().toISOString().split('T')[0],
+    sn: 'SONY-Y75XR90-001',
+    factoryArea: 'GL',
+    floor: '3F'
+  };
+
+  return (
+    <group 
+      position={position} 
+      rotation={rotation}
+      onClick={(e: any) => { e.stopPropagation(); onClick(tvData); }}
+      onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { setHovered(false); document.body.style.cursor = 'auto'; }}
+    >
+      {/* Selection Highlight */}
+      {isSelected && (
+        <mesh position={[0, 0, 0.15]}>
+          <planeGeometry args={[25, 14.4]} />
+          <meshBasicMaterial color="#3b82f6" transparent opacity={0.3} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+
+      {/* TV Frame (Sony Y-75XR90 style) */}
+      <mesh position={[0, 0, -0.1]}>
+        <boxGeometry args={[24.2, 13.6, 0.3]} />
+        <meshStandardMaterial color={hovered ? "#222222" : "#111111"} roughness={0.2} metalness={0.8} />
+      </mesh>
+      
+      {/* TV Bezel (Very thin) */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[24, 13.4, 0.1]} />
+        <meshStandardMaterial color="#000000" roughness={0.1} metalness={0.9} />
+      </mesh>
+
+      {/* Sony Logo (simulated) */}
+      <Text position={[0, -6.9, 0.06]} fontSize={0.2} color="#ffffff" anchorX="center" anchorY="middle">
+        SONY
+      </Text>
+
+      {/* Screen / Dashboard Content */}
+      <mesh position={[0, 0, 0.06]}>
+        <planeGeometry args={[23.8, 13.2]} />
+        <meshBasicMaterial color="#0f172a" />
+      </mesh>
+
+      {/* Dashboard UI Elements */}
+      <group position={[0, 0, 0.07]}>
+        {/* Header */}
+        <Text position={[0, 5.5, 0]} fontSize={0.8} color="#38bdf8" anchorX="center" anchorY="middle">
+          Workshop OEE Dashboard
+        </Text>
+
+        {/* OEE Main Stat */}
+        <group position={[-6, 1.5, 0]}>
+          <Text position={[0, 2, 0]} fontSize={0.5} color="#94a3b8" anchorX="center">Overall Equipment Effectiveness</Text>
+          <Text position={[0, 0, 0]} fontSize={3.5} color="#22c55e" anchorX="center">87.5%</Text>
+          <Text position={[0, -2, 0]} fontSize={0.4} color="#22c55e" anchorX="center">▲ 2.1% from yesterday</Text>
+        </group>
+
+        {/* Sub Stats */}
+        <group position={[5, 1.5, 0]}>
+          <group position={[-3.5, 1.5, 0]}>
+            <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Availability</Text>
+            <Text position={[0, 0, 0]} fontSize={1.2} color="#38bdf8" anchorX="center">92.0%</Text>
+          </group>
+          <group position={[3.5, 1.5, 0]}>
+            <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Performance</Text>
+            <Text position={[0, 0, 0]} fontSize={1.2} color="#facc15" anchorX="center">98.2%</Text>
+          </group>
+          <group position={[-3.5, -2, 0]}>
+            <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Quality</Text>
+            <Text position={[0, 0, 0]} fontSize={1.2} color="#22c55e" anchorX="center">96.8%</Text>
+          </group>
+          <group position={[3.5, -2, 0]}>
+            <Text position={[0, 0.8, 0]} fontSize={0.4} color="#94a3b8" anchorX="center">Target</Text>
+            <Text position={[0, 0, 0]} fontSize={1.2} color="#f87171" anchorX="center">85.0%</Text>
+          </group>
+        </group>
+
+        {/* Bottom Chart / Bars */}
+        <group position={[0, -3.5, 0]}>
+          <Text position={[-10, 1, 0]} fontSize={0.4} color="#94a3b8" anchorX="left">Line A</Text>
+          <mesh position={[-3, 1, 0]}>
+            <planeGeometry args={[10, 0.6]} />
+            <meshBasicMaterial color="#38bdf8" />
+          </mesh>
+          <Text position={[2.5, 1, 0]} fontSize={0.4} color="#ffffff" anchorX="left">91%</Text>
+
+          <Text position={[-10, -0.5, 0]} fontSize={0.4} color="#94a3b8" anchorX="left">Line B</Text>
+          <mesh position={[-3.5, -0.5, 0]}>
+            <planeGeometry args={[9, 0.6]} />
+            <meshBasicMaterial color="#facc15" />
+          </mesh>
+          <Text position={[1.5, -0.5, 0]} fontSize={0.4} color="#ffffff" anchorX="left">84%</Text>
+
+          <Text position={[-10, -2, 0]} fontSize={0.4} color="#94a3b8" anchorX="left">Line C</Text>
+          <mesh position={[-2, -2, 0]}>
+            <planeGeometry args={[12, 0.6]} />
+            <meshBasicMaterial color="#22c55e" />
+          </mesh>
+          <Text position={[4.5, -2, 0]} fontSize={0.4} color="#ffffff" anchorX="left">95%</Text>
+        </group>
+      </group>
+    </group>
+  );
+};
 
 const FactoryScene: React.FC<{ 
   equipmentList: Equipment[],
@@ -291,6 +415,13 @@ const FactoryScene: React.FC<{
           <planeGeometry args={[200, 30]} />
           <meshStandardMaterial color="#f1f5f9" />
         </mesh>
+        {/* TV Dashboard on Back Wall */}
+        <TVDashboard 
+          position={[0, 15, -59.8]} 
+          isSelected={selectedId === 'tv-dashboard-01'} 
+          onClick={onItemClick} 
+        />
+
         {/* Left Wall */}
         <mesh position={[-60, 15, 0]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[200, 30]} />
@@ -880,7 +1011,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center">
                 <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl mb-3">
-                  {selectedItem.type === EquipmentType.CheckinEquipment ? <Fingerprint size={32} /> : selectedItem.type === EquipmentType.AGVCarEquipment ? <Truck size={32} /> : <Cpu size={32} />}
+                  {selectedItem.type === EquipmentType.CheckinEquipment ? <Fingerprint size={32} /> : selectedItem.type === EquipmentType.AGVCarEquipment ? <Truck size={32} /> : selectedItem.type === EquipmentType.TVDashboard ? <Monitor size={32} /> : <Cpu size={32} />}
                 </div>
                 <h4 className="text-md font-bold text-slate-900 text-center">{selectedItem.name}</h4>
                 <p className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-tight">SN: {selectedItem.sn || selectedItem.id}</p>
@@ -968,7 +1099,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
                 </div>
               )}
 
-              {(selectedItem.type !== EquipmentType.CheckinEquipment && !selectedItem.name.includes('打卡')) && (
+              {(selectedItem.type !== EquipmentType.CheckinEquipment && !selectedItem.name.includes('打卡') && selectedItem.type !== EquipmentType.TVDashboard) && (
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">運行狀態</p>
@@ -986,6 +1117,21 @@ const Line3DView: React.FC<Line3DViewProps> = ({
                       <p className="text-[10px] text-slate-400 font-bold uppercase mb-1 flex items-center"><Activity size={12} className="mr-1" /> 震動</p>
                       <p className="text-lg font-bold text-slate-800">{selectedItem.vibration}g</p>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedItem.type === EquipmentType.TVDashboard && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">運行狀態</p>
+                    <div className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold ${getStatusColor(selectedItem.status)}`}>
+                      <Activity size={14} className="mr-2" /> {selectedItem.status}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                    <p className="text-[10px] text-blue-400 font-bold uppercase mb-1 flex items-center"><Monitor size={12} className="mr-1" /> 顯示內容</p>
+                    <p className="text-sm font-bold text-blue-800">車間 OEE 實時數據</p>
                   </div>
                 </div>
               )}

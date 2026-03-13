@@ -170,6 +170,7 @@ const App: React.FC = () => {
             lines={allLines}
             equipmentList={allEquipment}
             factoryInfo={factoryInfo}
+            currentUsername={currentUsername}
           />
         );
       case 'EQUIPMENT':

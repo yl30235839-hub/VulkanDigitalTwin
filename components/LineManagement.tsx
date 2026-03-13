@@ -14,9 +14,11 @@ interface LineManagementProps {
   lines: ProductionLine[];
   equipmentList?: Equipment[];
   factoryInfo: { code: string, floor: string };
+  currentUsername?: string;
 }
 
-const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpdateFactory, onResetFactory, lines, equipmentList = [], factoryInfo }) => {
+const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpdateFactory, onResetFactory, lines, equipmentList = [], factoryInfo, currentUsername = 'admin' }) => {
+  const isAdmin = currentUsername === 'admin';
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [enteringLineId, setEnteringLineId] = useState<string | null>(null);
   const [newLineData, setNewLineData] = useState({ 
@@ -330,8 +332,8 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
         </button>
         <button 
           onClick={handleExportClick}
-          disabled={isExporting}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-lg transition-all active:scale-95 disabled:opacity-50"
+          disabled={isExporting || !isAdmin}
+          className={`px-6 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-lg transition-all active:scale-95 disabled:opacity-50 ${isAdmin ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
         >
           {isExporting ? (
             <RotateCw size={18} className="animate-spin mr-1.5" />
@@ -359,7 +361,8 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
               value={localFactoryInfo.code}
               onChange={(e) => setLocalFactoryInfo({...localFactoryInfo, code: e.target.value})}
               placeholder="例如: GL"
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-all"
+              disabled={!isAdmin}
+              className={`w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-all ${!isAdmin ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
             />
           </div>
           
@@ -372,14 +375,15 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
               value={localFactoryInfo.floor}
               onChange={(e) => setLocalFactoryInfo({...localFactoryInfo, floor: e.target.value})}
               placeholder="例如: 3F"
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-all"
+              disabled={!isAdmin}
+              className={`w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono transition-all ${!isAdmin ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
             />
           </div>
           
           <button 
             onClick={handleSaveFactory}
-            disabled={isSavingFactory}
-            className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-blue-100 transition-all active:scale-95 disabled:opacity-50"
+            disabled={isSavingFactory || !isAdmin}
+            className={`flex items-center justify-center px-8 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 ${isAdmin ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
           >
             {isSavingFactory ? (
               <RotateCw size={18} className="animate-spin mr-2" />
@@ -400,7 +404,8 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
         <div className="flex space-x-3">
           <button 
             onClick={() => setIsModalOpen(true)} 
-            className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-lg transition-all active:scale-95"
+            disabled={!isAdmin}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-lg transition-all active:scale-95 ${isAdmin ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
           >
             <Plus size={18} className="mr-1.5" /> 新增產綫
           </button>
@@ -446,8 +451,8 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
               <div className="flex items-center justify-center">
                 <button 
                   onClick={() => handleEnterLine(line.id)}
-                  disabled={enteringLineId === line.id}
-                  className="w-full md:w-auto px-8 py-3 bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center hover:bg-slate-900 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                  disabled={enteringLineId === line.id || !isAdmin}
+                  className={`w-full md:w-auto px-8 py-3 rounded-xl font-bold flex items-center justify-center transition-all shadow-md active:scale-95 disabled:opacity-50 ${isAdmin ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                 >
                   {enteringLineId === line.id ? (
                     <>
