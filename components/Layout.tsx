@@ -107,7 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
           </div>
         </header>
 
-        <main className={`flex-1 overflow-y-auto bg-slate-50 ${is3DMode ? 'p-0' : 'p-6'}`}>
+        <main className={`flex-1 overflow-y-auto bg-slate-50 ${is3DMode ? 'p-0 flex flex-col' : 'p-6'}`}>
           {children}
         </main>
       </div>

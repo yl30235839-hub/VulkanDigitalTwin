@@ -130,6 +130,7 @@ export interface AlarmRecordModel {
 export interface FACATipsMessage {
   lineSystemName: string;
   equipmentSystemName: string;
+  equipmentName?: string;
   alarmNew: AlarmRecordModel[];
 }
 

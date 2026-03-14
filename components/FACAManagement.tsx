@@ -168,24 +168,24 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
   const [isLoadingFaca, setIsLoadingFaca] = useState(false);
 
   const cat3Options = useMemo(() => {
-    const options = facaLibraryData.map(item => item.AlarmLevel3).filter(Boolean);
+    const options = facaLibraryData.map(item => item.AlarmLevel3 || (item as any).alarmLevel3).filter(Boolean);
     return Array.from(new Set(options));
   }, [facaLibraryData]);
 
   const tag1Options = useMemo(() => {
     if (!facaForm.cat3) return [];
-    const filtered = facaLibraryData.filter(item => item.AlarmLevel3 === facaForm.cat3);
-    const options = filtered.map(item => item.CategoryTag1).filter(Boolean);
+    const filtered = facaLibraryData.filter(item => (item.AlarmLevel3 || (item as any).alarmLevel3) === facaForm.cat3);
+    const options = filtered.map(item => item.CategoryTag1 || (item as any).categoryTag1).filter(Boolean);
     return Array.from(new Set(options));
   }, [facaLibraryData, facaForm.cat3]);
 
   const tag2Options = useMemo(() => {
     if (!facaForm.cat3 || !facaForm.tag1) return [];
     const filtered = facaLibraryData.filter(item => 
-      item.AlarmLevel3 === facaForm.cat3 && 
-      item.CategoryTag1 === facaForm.tag1
+      (item.AlarmLevel3 || (item as any).alarmLevel3) === facaForm.cat3 && 
+      (item.CategoryTag1 || (item as any).categoryTag1) === facaForm.tag1
     );
-    const options = filtered.map(item => item.CategoryTag2).filter(Boolean);
+    const options = filtered.map(item => item.CategoryTag2 || (item as any).categoryTag2).filter(Boolean);
     return Array.from(new Set(options));
   }, [facaLibraryData, facaForm.cat3, facaForm.tag1]);
 
@@ -193,18 +193,18 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
     if (!facaForm.cat3 || !facaForm.tag1 || !facaForm.tag2) return [];
     
     const filtered = facaLibraryData.filter(item => 
-      item.AlarmLevel3 === facaForm.cat3 && 
-      item.CategoryTag1 === facaForm.tag1 &&
-      item.CategoryTag2 === facaForm.tag2
+      (item.AlarmLevel3 || (item as any).alarmLevel3) === facaForm.cat3 && 
+      (item.CategoryTag1 || (item as any).categoryTag1) === facaForm.tag1 &&
+      (item.CategoryTag2 || (item as any).categoryTag2) === facaForm.tag2
     );
     
     return filtered.map((item, index) => ({
-      id: `S-${item.AlarmCode}-${index}`,
-      category: item.FaultClassification || '',
-      description: item.FaultDescription || '',
-      reason: item.FailureReason || '',
-      action: item.FailureSolution || '',
-      alarmCodeRef: item.AlarmCode || ''
+      id: `S-${item.AlarmCode || (item as any).alarmCode}-${index}`,
+      category: item.FaultClassification || (item as any).faultClassification || '',
+      description: item.FaultDescription || (item as any).faultDescription || '',
+      reason: item.FailureReason || (item as any).failureReason || '',
+      action: item.FailureSolution || (item as any).failureSolution || '',
+      alarmCodeRef: item.AlarmCode || (item as any).alarmCode || ''
     }));
   }, [facaLibraryData, facaForm.cat3, facaForm.tag1, facaForm.tag2]);
 
@@ -244,19 +244,21 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
       }
       
       const result = await response.json();
-      if (result.code === 200 && result.data && result.data.fACALibrary) {
-        const library: FACALibrary[] = result.data.fACALibrary;
+      if (result.code === 200 && result.data) {
+        // Fallback for different casing of fACALibrary
+        const libraryData = result.data.fACALibrary || result.data.facalibrary || result.data.FACALibrary || [];
+        const library: FACALibrary[] = libraryData;
         setFacaLibraryData(library);
         
         if (library.length > 0) {
           const firstItem = library[0];
           setFacaForm(prev => ({
             ...prev,
-            cat1: firstItem.AlarmLevel1 || '',
-            cat2: firstItem.AlarmLevel2 || '',
-            cat3: '',
-            tag1: '',
-            tag2: ''
+            cat1: firstItem.AlarmLevel1 || (firstItem as any).alarmLevel1 || '',
+            cat2: firstItem.AlarmLevel2 || (firstItem as any).alarmLevel2 || '',
+            cat3: firstItem.AlarmLevel3 || (firstItem as any).alarmLevel3 || '',
+            tag1: firstItem.CategoryTag1 || (firstItem as any).categoryTag1 || '',
+            tag2: firstItem.CategoryTag2 || (firstItem as any).categoryTag2 || ''
           }));
         }
       } else {
@@ -511,12 +513,12 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                     <div className="flex items-center space-x-4">
                       <div className="flex-1">
                         <span className="text-[10px] text-red-400 font-bold uppercase">開始</span>
-                        <div className="text-lg font-mono font-bold text-red-800">{selectedItem?.startTime}</div>
+                        <div className="text-lg font-mono font-bold text-red-800">{formatDisplayTime(selectedItem?.startTime || '')}</div>
                       </div>
                       <div className="w-8 h-[2px] bg-red-200"></div>
                       <div className="flex-1">
                         <span className="text-[10px] text-red-400 font-bold uppercase">結束</span>
-                        <div className="text-lg font-mono font-bold text-red-800">{selectedItem?.endTime}</div>
+                        <div className="text-lg font-mono font-bold text-red-800">{formatDisplayTime(selectedItem?.endTime || '')}</div>
                       </div>
                     </div>
                   </div>
@@ -557,7 +559,7 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                         value={facaForm.cat1} 
                         className="w-full p-3 border border-slate-200 rounded-xl outline-none bg-slate-100 text-slate-500 text-sm cursor-not-allowed"
                       >
-                        <option value={facaForm.cat1}>{facaForm.cat1}</option>
+                        <option value={facaForm.cat1}>{facaForm.cat1 || '自動帶入'}</option>
                       </select>
                     </div>
                     <div>
@@ -567,7 +569,7 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                         value={facaForm.cat2} 
                         className="w-full p-3 border border-slate-200 rounded-xl outline-none bg-slate-100 text-slate-500 text-sm cursor-not-allowed"
                       >
-                        <option value={facaForm.cat2}>{facaForm.cat2}</option>
+                        <option value={facaForm.cat2}>{facaForm.cat2 || '自動帶入'}</option>
                       </select>
                     </div>
                     <div>

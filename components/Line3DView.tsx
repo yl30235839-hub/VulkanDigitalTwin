@@ -711,16 +711,23 @@ const Line3DView: React.FC<Line3DViewProps> = ({
       connection.on('FACATips', (data: FACATipsMessage) => {
         console.log("Received FACATips update:", data);
         
-        const newPendingItems: FACAPendingItem[] = data.alarmNew.map((alarm, index) => ({
-          id: `F-${Date.now()}-${index}`,
-          date: alarm.AlarmStartTime,
-          startTime: alarm.AlarmStartTime,
-          endTime: alarm.AlarmEndTime,
-          machineName: data.equipmentSystemName,
-          alarmCode: alarm.AlarmCode,
-          alarmContent: alarm.AlarmNote,
-          status: 'AWAITING'
-        }));
+        const newPendingItems: FACAPendingItem[] = data.alarmNew.map((alarm: any, index) => {
+          const startTime = alarm.AlarmStartTime || alarm.alarmStartTime || new Date().toISOString();
+          const endTime = alarm.AlarmEndTime || alarm.alarmEndTime || '';
+          const alarmCode = alarm.AlarmCode || alarm.alarmCode || 'UNKNOWN';
+          const alarmContent = alarm.AlarmNote || alarm.alarmNote || '未知錯誤';
+          
+          return {
+            id: `F-${Date.now()}-${index}`,
+            date: startTime.includes(' ') ? startTime.split(' ')[0] : startTime.split('T')[0],
+            startTime: startTime,
+            endTime: endTime,
+            machineName: data.equipmentName || data.equipmentSystemName || '未知設備',
+            alarmCode: alarmCode,
+            alarmContent: alarmContent,
+            status: 'AWAITING'
+          };
+        });
 
         setFacaPendingItems(prev => [...prev, ...newPendingItems]);
       });
@@ -1006,7 +1013,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 relative flex h-full w-full overflow-hidden">
+    <div className="bg-slate-900 relative flex flex-1 w-full overflow-hidden">
       {/* FACA Freeze Overlay */}
       {facaPendingItems.length > 0 && (
         <div className="absolute inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
@@ -1083,7 +1090,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
         
         {/* 移除原本位於右上角的縮放按鈕 */}
 
-        <div className="w-full h-full">
+        <div className="absolute inset-0">
           <Canvas shadows dpr={[1, 2]}>
             <FactoryScene 
               equipmentList={localEquipmentList} 
