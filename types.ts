@@ -140,6 +140,8 @@ export interface FACAPendingItem {
   startTime: string;
   endTime: string;
   machineName: string;
+  lineSystemName: string;
+  equipmentSystemName: string;
   alarmCode: string;
   alarmContent: string;
   status: 'AWAITING' | 'ANALYZING' | 'COMPLETED';

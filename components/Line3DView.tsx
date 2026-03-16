@@ -723,6 +723,8 @@ const Line3DView: React.FC<Line3DViewProps> = ({
             startTime: startTime,
             endTime: endTime,
             machineName: data.equipmentName || data.equipmentSystemName || '未知設備',
+            lineSystemName: data.lineSystemName || '',
+            equipmentSystemName: data.equipmentSystemName || '',
             alarmCode: alarmCode,
             alarmContent: alarmContent,
             status: 'AWAITING'

@@ -40,6 +40,7 @@ interface PartRecord {
   name: string;
   model: string;
   brand: string;
+  category?: string;
   quantity: string;
   changeTime: string;
   description: string;
@@ -47,6 +48,7 @@ interface PartRecord {
     name: string;
     brand: string;
     model: string;
+    category?: string;
   };
 }
 
@@ -126,13 +128,15 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
     name: '',
     model: '',
     brand: '',
+    category: '',
     quantity: '1',
     changeTime: formatNow(),
     description: '',
     originalPart: {
       name: '',
       brand: '',
-      model: ''
+      model: '',
+      category: ''
     }
   });
 
@@ -317,20 +321,105 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
     setIsPartsModalOpen(false);
   };
 
-  const handleSubmitFACA = (e: React.FormEvent) => {
+  const handleSubmitFACA = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedId) return;
+    if (!selectedId || !selectedItem) return;
+    
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    try {
+      let alarmDuration = 0;
+      if (selectedItem.startTime && selectedItem.endTime) {
+        const start = new Date(selectedItem.startTime).getTime();
+        const end = new Date(selectedItem.endTime).getTime();
+        if (!isNaN(start) && !isNaN(end)) {
+          alarmDuration = Math.max(0, Math.round((end - start) / 1000));
+        }
+      }
+
+      let faultClassification = '';
+      if (appliedSolutionId) {
+        const sol = filteredSolutions.find(s => s.id === appliedSolutionId);
+        if (sol) faultClassification = sol.category;
+      } else if (filteredSolutions.length > 0) {
+        faultClassification = filteredSolutions[0].category;
+      }
+
+      const payload = {
+        lineSystemName: selectedItem.lineSystemName || "",
+        equipmentSystemName: selectedItem.equipmentSystemName || "",
+        alarmCode: selectedItem.alarmCode || "",
+        faultDescription: selectedItem.alarmContent || "",
+        faultClassification: faultClassification || facaForm.cat1 || "",
+        alarmStartTime: selectedItem.startTime || "",
+        alarmEndTime: selectedItem.endTime || "",
+        alarmDuration: alarmDuration,
+        alarmLevel1: facaForm.cat1 || "",
+        alarmLevel2: facaForm.cat2 || "",
+        alarmLevel3: facaForm.cat3 || "",
+        categoryTag1: facaForm.tag1 || "",
+        categoryTag2: facaForm.tag2 || "",
+        failureReason: facaForm.faDetail || "",
+        otherFailure: isOtherFault,
+        failureSolution: facaForm.caDetail || "",
+        longTermSolution: "",
+        maintainStartTime: facaForm.repairStart || "",
+        maintainEndTime: facaForm.repairEnd || "",
+        maintains: partsRecord ? {
+          productPartLocation: partsRecord.description || "",
+          productNameNew: partsRecord.name || "",
+          productCategoryNew: partsRecord.category || "",
+          productModelNew: partsRecord.model || "",
+          brandNew: partsRecord.brand || "",
+          num: partsRecord.quantity || "0",
+          productNameOld: partsRecord.originalPart.name || "",
+          productCategoryOld: partsRecord.originalPart.category || "",
+          productModelOld: partsRecord.originalPart.model || "",
+          brandOld: partsRecord.originalPart.brand || ""
+        } : {
+          productPartLocation: "",
+          productNameNew: "",
+          productCategoryNew: "",
+          productModelNew: "",
+          brandNew: "",
+          num: "0",
+          productNameOld: "",
+          productCategoryOld: "",
+          productModelOld: "",
+          brandOld: ""
+        },
+        maintainers: {
+          empNo: facaForm.handlerId || "",
+          empName: facaForm.handlerName || "",
+          department: facaForm.handlerDept || ""
+        }
+      };
+
+      const response = await fetch('https://localhost:7044/api/FACA/FACAUpload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+
+      if (result.code === 200) {
+        const updatedPendingItems = pendingItems.filter(item => item.id !== selectedId);
+        setPendingItems(updatedPendingItems);
+        
+        alert(`FACA 分析項目 ${selectedId} 已成功上傳雲端並標記為處理完成！`);
+        setSelectedId(null);
+      } else {
+        alert(`提交失敗: ${result.message || '未知錯誤'}`);
+      }
+    } catch (error) {
+      console.error('FACA upload error:', error);
+      alert(`提交時發生網路錯誤，請稍後再試。`);
+    } finally {
       setIsSubmitting(false);
-      
-      // 更新邏輯：從待處理列表中刪除對應的項目
-      const updatedPendingItems = pendingItems.filter(item => item.id !== selectedId);
-      setPendingItems(updatedPendingItems);
-      
-      alert(`FACA 分析項目 ${selectedId} 已成功上傳雲端並標記為處理完成！`);
-      setSelectedId(null);
-    }, 1500);
+    }
   };
 
   const isInputsDisabled = !isOtherFault;
@@ -422,10 +511,10 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                   <button 
                     type="submit" 
                     disabled={isSubmitting}
-                    className="flex items-center px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all"
+                    className={`flex items-center px-6 py-2.5 text-white rounded-xl font-bold shadow-lg transition-all ${isSubmitting ? 'bg-slate-400 cursor-not-allowed shadow-none' : 'bg-blue-600 shadow-blue-200 hover:bg-blue-700 active:scale-95'}`}
                   >
                     {isSubmitting ? <Activity className="animate-spin mr-2" size={18} /> : <CloudUpload size={18} className="mr-2" />}
-                    提交 FACA 分析
+                    {isSubmitting ? '處理中...' : '提交 FACA 分析'}
                   </button>
                 </div>
               </div>
@@ -798,6 +887,16 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                   />
                 </div>
                 <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">品類</label>
+                  <input 
+                    type="text" 
+                    value={tempPartsRecord.category || ''}
+                    onChange={(e) => setTempPartsRecord({...tempPartsRecord, category: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                    placeholder="如: 電機"
+                  />
+                </div>
+                <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">數量</label>
                   <input 
                     type="text" 
@@ -805,15 +904,6 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                     onChange={(e) => setTempPartsRecord({...tempPartsRecord, quantity: e.target.value})}
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                     placeholder="1"
-                  />
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">更換時間 (XXXX/XX/XX XX:XX:XX)</label>
-                  <input 
-                    type="text" 
-                    value={tempPartsRecord.changeTime}
-                    onChange={(e) => setTempPartsRecord({...tempPartsRecord, changeTime: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none font-mono"
                   />
                 </div>
                 <div className="col-span-2 space-y-1">
@@ -831,13 +921,22 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
                 <h4 className="text-xs font-bold text-slate-600 flex items-center">
                   <Trash2 size={14} className="mr-2" /> 原物料模塊 (更換前零件)
                 </h4>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase">品名</label>
                     <input 
                       type="text" 
                       value={tempPartsRecord.originalPart.name}
                       onChange={(e) => setTempPartsRecord({...tempPartsRecord, originalPart: {...tempPartsRecord.originalPart, name: e.target.value}})}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-orange-500 outline-none bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">品類</label>
+                    <input 
+                      type="text" 
+                      value={tempPartsRecord.originalPart.category || ''}
+                      onChange={(e) => setTempPartsRecord({...tempPartsRecord, originalPart: {...tempPartsRecord.originalPart, category: e.target.value}})}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-orange-500 outline-none bg-white"
                     />
                   </div>
