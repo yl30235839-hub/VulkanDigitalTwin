@@ -28,6 +28,7 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('BASIC');
   const [connectionResult, setConnectionResult] = useState<ConnectionResult>('IDLE');
+  const [isTesting, setIsTesting] = useState(false);
   
   // Database Connection States
   const [dbConfig, setDbConfig] = useState({
@@ -114,6 +115,36 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
       });
     }
   }, [device]);
+
+  const handleTestConnection = async () => {
+    if (!device) return;
+    setIsTesting(true);
+    setConnectionResult('TESTING');
+    try {
+      const response = await fetch('https://localhost:7044/api/Equipment/CommLinkTest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          equipmentType: device.type
+        })
+      });
+      const result = await response.json();
+      if (result.code === 200) {
+        setConnectionResult('SUCCESS');
+      } else {
+        setConnectionResult('FAILED');
+        alert(`測試失敗: ${result.message || '未知錯誤'}`);
+      }
+    } catch (error) {
+      console.error('Connection test error:', error);
+      setConnectionResult('FAILED');
+      alert('測試時發生網路錯誤，請稍後再試。');
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!device) return;
@@ -862,11 +893,12 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
                 </div>
                 <button 
                   type="button"
-                  onClick={() => { setConnectionResult('TESTING'); setTimeout(() => setConnectionResult(Math.random() > 0.2 ? 'SUCCESS' : 'FAILED'), 1500); }}
-                  className={`flex items-center px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 shrink-0 ${connectionResult === 'SUCCESS' ? 'bg-green-600 text-white' : connectionResult === 'FAILED' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white'}`}
+                  onClick={handleTestConnection}
+                  disabled={isTesting}
+                  className={`flex items-center px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 shrink-0 ${connectionResult === 'SUCCESS' ? 'bg-green-600 text-white' : connectionResult === 'FAILED' ? 'bg-red-600 text-white' : isTesting ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
                 >
-                  {connectionResult === 'TESTING' ? <RotateCw size={18} className="animate-spin mr-2" /> : <Zap size={18} className="mr-2" />}
-                  {connectionResult === 'TESTING' ? '連線測試中...' : '測試設備連線'}
+                  {isTesting ? <RotateCw size={18} className="animate-spin mr-2" /> : <Zap size={18} className="mr-2" />}
+                  {isTesting ? '處理中...' : '測試設備連線'}
                 </button>
               </div>
             </div>
