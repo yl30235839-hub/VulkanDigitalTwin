@@ -8,6 +8,9 @@ import Line3DView from './components/Line3DView';
 import DeviceSettings from './components/DeviceSettings';
 import AttendanceMaintenance from './components/AttendanceMaintenance';
 import FACAManagement from './components/FACAManagement';
+import YieldAnalysis from './components/YieldAnalysis';
+import IntelligentMonitoring from './components/IntelligentMonitoring';
+import ScrapRateAnalysis from './components/ScrapRateAnalysis';
 import { PageView, Equipment, ProductionLine, FACAPendingItem, Personnel, UserData } from './types';
 import { MOCK_EQUIPMENT, MOCK_LINES, INITIAL_PERSONNEL } from './constants';
 
@@ -231,6 +234,7 @@ const App: React.FC = () => {
             setFacaPendingItems={setFacaPendingItems}
             isMonitoring={isMonitoring}
             setIsMonitoring={setIsMonitoring}
+            onNavigate={handleNavigate}
           />
         );
       case 'ATTENDANCE_MAINTENANCE':
@@ -287,6 +291,12 @@ const App: React.FC = () => {
             equipmentSystemName={selectedDeviceId || ''}
           />
         );
+      case 'YIELD_ANALYSIS':
+        return <YieldAnalysis onBack={() => setCurrentPage('3D_VIEW')} />;
+      case 'INTELLIGENT_MONITORING':
+        return <IntelligentMonitoring onBack={() => setCurrentPage('3D_VIEW')} />;
+      case 'SCRAP_RATE_ANALYSIS':
+        return <ScrapRateAnalysis onBack={() => setCurrentPage('3D_VIEW')} />;
       default:
         return (
           <LineManagement 

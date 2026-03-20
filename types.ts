@@ -114,7 +114,7 @@ export interface UserData {
   FingerExist?: boolean;
 }
 
-export type PageView = 'LOGIN' | 'REGISTER' | 'LINES' | 'EQUIPMENT' | '3D_VIEW' | 'DEVICE_SETTINGS' | 'ATTENDANCE_MAINTENANCE' | 'FACA_MANAGEMENT';
+export type PageView = 'LOGIN' | 'REGISTER' | 'LINES' | 'EQUIPMENT' | '3D_VIEW' | 'DEVICE_SETTINGS' | 'ATTENDANCE_MAINTENANCE' | 'FACA_MANAGEMENT' | 'YIELD_ANALYSIS' | 'INTELLIGENT_MONITORING' | 'SCRAP_RATE_ANALYSIS';
 
 export interface AlarmRecordModel {
   AlarmCode: string;

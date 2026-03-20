@@ -10,7 +10,7 @@ import {
   Play, Square, User, Hash, CheckCircle2, ClipboardEdit, Save, AlertCircle,
   Scan, ShieldCheck, FileWarning, MessageSquare, Edit3, Fingerprint, Monitor
 } from 'lucide-react';
-import { Equipment, MachineStatus, EquipmentType, FACAPendingItem, FACATipsMessage, AlarmRecordModel, ProductionLine } from '../types';
+import { Equipment, MachineStatus, EquipmentType, FACAPendingItem, FACATipsMessage, AlarmRecordModel, ProductionLine, PageView } from '../types';
 
 // Fix: Extend the JSX namespace to include Three.js intrinsic elements provided by React Three Fiber.
 declare global {
@@ -593,6 +593,7 @@ interface Line3DViewProps {
   setFacaPendingItems: React.Dispatch<React.SetStateAction<FACAPendingItem[]>>;
   isMonitoring: boolean;
   setIsMonitoring: React.Dispatch<React.SetStateAction<boolean>>;
+  onNavigate: (page: PageView) => void;
 }
 
 const Line3DView: React.FC<Line3DViewProps> = ({ 
@@ -603,7 +604,8 @@ const Line3DView: React.FC<Line3DViewProps> = ({
   facaPendingItems,
   setFacaPendingItems,
   isMonitoring,
-  setIsMonitoring
+  setIsMonitoring,
+  onNavigate
 }) => {
   const [isRunningLoading, setIsRunningLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Equipment | null>(null);
@@ -1236,8 +1238,26 @@ const Line3DView: React.FC<Line3DViewProps> = ({
                   </div>
                   <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
                     <p className="text-[10px] text-blue-400 font-bold uppercase mb-1 flex items-center"><Monitor size={12} className="mr-1" /> 顯示內容</p>
-                    <p className="text-sm font-bold text-blue-800">車間 OEE 實時數據</p>
+                    <p className="text-sm font-bold text-blue-800">
+                      {selectedItem.name === '良率分析數字看板' ? '車間良率實時數據' : 
+                       selectedItem.name === '抛料率分析數字看板' ? '車間抛料率實時數據' : 
+                       '車間 OEE 實時數據'}
+                    </p>
                   </div>
+                  <button 
+                    onClick={() => {
+                      if (selectedItem.name === '良率分析數字看板') {
+                        onNavigate('YIELD_ANALYSIS');
+                      } else if (selectedItem.name === '抛料率分析數字看板') {
+                        onNavigate('SCRAP_RATE_ANALYSIS');
+                      } else {
+                        onNavigate('INTELLIGENT_MONITORING');
+                      }
+                    }}
+                    className="w-full py-3 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl font-bold text-xs shadow-sm hover:bg-indigo-100 transition-all flex items-center justify-center group"
+                  >
+                    <Activity size={14} className="mr-2" /> 查看明細 <ChevronRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
+                  </button>
                 </div>
               )}
             </div>
