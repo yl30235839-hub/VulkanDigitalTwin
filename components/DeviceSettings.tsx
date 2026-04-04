@@ -15,7 +15,7 @@ interface DeviceSettingsProps {
   onBack: () => void;
 }
 
-type TabType = 'BASIC' | 'MAPPING';
+type TabType = 'BASIC' | 'MAPPING' | 'PROCESS_LAYOUT';
 type ConnectionResult = 'IDLE' | 'TESTING' | 'SUCCESS' | 'FAILED';
 
 interface TableColumn {
@@ -81,7 +81,9 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
     ngCountAddress: '',
     rejectCountAddress: '',
     statusAddress: '',
-    alarmEndAddress: ''
+    alarmEndAddress: '',
+    processAddress: '',
+    processAddressLength: 0
   });
 
   useEffect(() => {
@@ -111,7 +113,9 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
         ngCountAddress: device.ngCountAddress || '',
         rejectCountAddress: device.rejectCountAddress || '',
         statusAddress: device.statusAddress || '',
-        alarmEndAddress: device.alarmEndAddress || ''
+        alarmEndAddress: device.alarmEndAddress || '',
+        processAddress: device.processAddress || '',
+        processAddressLength: device.processAddressLength || 0
       });
     }
   }, [device]);
@@ -151,8 +155,14 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
     setSaving(true);
     
     try {
-      if (device.type === EquipmentType.AssemblyEquipment) {
-        const response = await api.post('https://localhost:7044/api/Equipment/AEMaintenance', {
+      if (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) {
+        let endpoint = 'https://localhost:7044/api/Equipment/AEMaintenance';
+        if (device.type === EquipmentType.TestingEquipment) {
+          endpoint = 'https://localhost:7044/api/Equipment/TEMaintenance';
+        } else if (device.type === EquipmentType.WaterVaporEquipment) {
+          endpoint = 'https://localhost:7044/api/Equipment/WEMaintenance';
+        }
+        const response = await api.post(endpoint, {
           lineSystemName: device.lineId,
           equipmentSystemName: device.id,
           equipmentName: formData.name,
@@ -171,7 +181,9 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
           nGCapacityAdd: formData.ngCountAddress,
           throwCapacityAdd: formData.rejectCountAddress,
           statusAdd: formData.statusAddress,
-          alarmEndSignAdd: formData.alarmEndAddress
+          alarmEndSignAdd: formData.alarmEndAddress,
+          processAddress: formData.processAddress,
+          processAddressLength: formData.processAddressLength
         });
 
         if (response.data.code === 200) {
@@ -805,7 +817,7 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
                 </div>
               </div>
 
-              {device.type === EquipmentType.AssemblyEquipment && (
+              {(device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && (
                 <div className="mt-8 pt-6 border-t border-slate-100">
                   <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center">
                     <Database size={16} className="mr-2 text-indigo-600" /> PLC 數據地址配置
@@ -936,11 +948,53 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
             >
               數據映射管理
             </button>
+            <button 
+              onClick={() => (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && setActiveTab('PROCESS_LAYOUT')} 
+              disabled={device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'PROCESS_LAYOUT' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} ${device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment ? 'opacity-30 cursor-not-allowed' : ''}`}
+            >
+              工藝排佈
+            </button>
          </div>
       </div>
 
       <div>
-        {activeTab === 'BASIC' ? renderBasicInfo() : renderMappingInfo()}
+        {activeTab === 'BASIC' && renderBasicInfo()}
+        {activeTab === 'MAPPING' && renderMappingInfo()}
+        {activeTab === 'PROCESS_LAYOUT' && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+            <div className="flex items-center mb-6">
+              <Layout size={24} className="text-indigo-600 mr-3" />
+              <h3 className="text-lg font-medium text-slate-800">工藝排佈配置</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">工藝地址</label>
+                <input 
+                  type="text" 
+                  value={formData.processAddress} 
+                  onChange={(e) => setFormData({...formData, processAddress: e.target.value})} 
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
+                  placeholder="例如: D1200"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700">工藝地址長度</label>
+                <input 
+                  type="number" 
+                  value={formData.processAddressLength} 
+                  onChange={(e) => setFormData({...formData, processAddressLength: parseInt(e.target.value) || 0})} 
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
+                />
+              </div>
+            </div>
+            
+            <div className="text-center text-slate-500 py-8 border-t border-slate-100">
+              <p className="max-w-md mx-auto">此分頁用於對該設備的工藝進行自定義排佈，其他內容暫時為空。</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

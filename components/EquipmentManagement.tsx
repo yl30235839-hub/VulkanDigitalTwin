@@ -14,9 +14,10 @@ interface EquipmentManagementProps {
   equipmentList: Equipment[];
   onAddEquipment: (equip: Equipment) => void;
   onMaintainDevice?: (deviceId: string, data?: any) => void;
+  onUpdateEquipmentOrder?: (reorderedEquipment: Equipment[]) => void;
 }
 
-const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineData, equipmentList, onAddEquipment, onMaintainDevice }) => {
+const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineData, equipmentList, onAddEquipment, onMaintainDevice, onUpdateEquipmentOrder }) => {
   const [activeTab, setActiveTab] = useState<'STATUS' | 'DATABASE'>('STATUS');
   
   // Production Line Maintenance State
@@ -67,6 +68,41 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
   const activeEquipmentList = lineId 
     ? equipmentList.filter(e => e.lineId === lineId) 
     : equipmentList;
+
+  // Sorting Modal State
+  const [isSortingModalOpen, setIsSortingModalOpen] = useState(false);
+  const [sortingList, setSortingList] = useState<Equipment[]>([]);
+
+  const handleOpenSorting = () => {
+    setSortingList([...activeEquipmentList]);
+    setIsSortingModalOpen(true);
+  };
+
+  const handleSaveOrder = () => {
+    if (onUpdateEquipmentOrder) {
+      onUpdateEquipmentOrder(sortingList);
+    }
+    setIsSortingModalOpen(false);
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    if (isNaN(dragIndex) || dragIndex === dropIndex) return;
+
+    const newList = [...sortingList];
+    const [draggedItem] = newList.splice(dragIndex, 1);
+    newList.splice(dropIndex, 0, draggedItem);
+    setSortingList(newList);
+  };
 
   const handleSaveLineInfo = async () => {
     setIsSavingLine(true);
@@ -175,10 +211,16 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
       } finally {
         setLoadingDeviceId(null);
       }
-    } else if (equip.type === EquipmentType.AssemblyEquipment) {
+    } else if (equip.type === EquipmentType.AssemblyEquipment || equip.type === EquipmentType.TestingEquipment || equip.type === EquipmentType.WaterVaporEquipment) {
       setLoadingDeviceId(equip.id);
       try {
-        const response = await api.post('https://localhost:7044/api/Equipment/EnterAEquipment', {
+        let endpoint = 'https://localhost:7044/api/Equipment/EnterAEquipment';
+        if (equip.type === EquipmentType.TestingEquipment) {
+          endpoint = 'https://localhost:7044/api/Equipment/EnterTEquipment';
+        } else if (equip.type === EquipmentType.WaterVaporEquipment) {
+          endpoint = 'https://localhost:7044/api/Equipment/EnterWVEquipment';
+        }
+        const response = await api.post(endpoint, {
           lineSystemName: equip.lineId,
           equipmentSystemName: equip.id
         });
@@ -344,12 +386,20 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
             <h2 className="text-xl font-bold text-slate-800">產綫設備詳情</h2>
             {lineId && <p className="text-sm text-slate-500 mt-1">當前產綫: <span className="font-mono font-bold text-blue-600">{lineId}</span></p>}
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm flex items-center shadow-sm transition-colors"
-          >
-            <Plus size={16} className="mr-2" /> 新增設備實例
-          </button>
+          <div className="flex space-x-3">
+            <button 
+              onClick={handleOpenSorting}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm flex items-center shadow-sm transition-colors"
+            >
+              <GripVertical size={16} className="mr-2" /> 柔性排序
+            </button>
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm flex items-center shadow-sm transition-colors"
+            >
+              <Plus size={16} className="mr-2" /> 新增設備實例
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-10">
@@ -497,6 +547,61 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
                 ) : (
                   '新增設備'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Sorting Modal */}
+      {isSortingModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center">
+                <GripVertical size={20} className="mr-2 text-indigo-500" />
+                編輯模式 (柔性排序)
+              </h3>
+              <button onClick={() => setIsSortingModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+              <p className="text-sm text-slate-500 mb-4">請通過拖拉拽的形式，對設備的順序進行編輯。</p>
+              
+              <div className="space-y-2">
+                {sortingList.map((equip, index) => (
+                  <div
+                    key={equip.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, index)}
+                    className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex items-center cursor-move hover:border-indigo-300 hover:shadow-md transition-all"
+                  >
+                    <GripVertical size={20} className="text-slate-400 mr-3" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-slate-800">{equip.name}</h4>
+                      <p className="text-xs text-slate-500">{equip.type}</p>
+                    </div>
+                    <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">#{equip.id}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-white border-t border-slate-100 flex justify-end space-x-3">
+              <button 
+                onClick={() => setIsSortingModalOpen(false)} 
+                className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded-lg"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleSaveOrder} 
+                className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm flex items-center"
+              >
+                完成
               </button>
             </div>
           </div>

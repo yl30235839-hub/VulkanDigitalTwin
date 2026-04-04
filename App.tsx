@@ -46,7 +46,39 @@ const App: React.FC = () => {
     setSelectedDeviceId(null);
   };
 
-  const handleNavigate = (page: PageView) => {
+  const handleNavigate = (page: PageView, data?: any) => {
+    if (page === 'LINES' && data) {
+      let lineSet = Array.isArray(data) ? data : (data.lineSet || data.LineSet || []);
+      if (typeof lineSet === 'string') {
+        try {
+          lineSet = JSON.parse(lineSet);
+        } catch (e) {
+          console.error("Failed to parse lineSet", e);
+          lineSet = [];
+        }
+      }
+      
+      const newLines: ProductionLine[] = lineSet.map((item: any) => {
+        const l = item.ManuLineInfo || item.IManufacturingLine || item;
+        return {
+          id: l.sysName || l.SysName || '',
+          factoryId: 'F1',
+          name: l.lineName || l.LineName || '',
+          description: l.description || l.Description || '',
+          category: l.line || l.Line || '',
+          lineType: (l.typeString || l.TypeString) === 'NVIDIA' ? LineType.NVIDIA : LineType.APPLE,
+          status: MachineStatus.Stopped,
+          outputPerHour: 0,
+          targetOutput: 1000
+        };
+      });
+      setAllLines(newLines);
+      
+      if (!Array.isArray(data)) {
+        setFactoryInfo({ code: data.site || data.Site || '', floor: data.floor || data.Floor || '' });
+      }
+    }
+
     setCurrentPage(page);
     if (page !== 'EQUIPMENT' && page !== 'DEVICE_SETTINGS' && page !== 'ATTENDANCE_MAINTENANCE' && page !== 'REGISTER' && page !== 'FACA_MANAGEMENT') {
       setSelectedLineId(null);
@@ -84,7 +116,9 @@ const App: React.FC = () => {
             ngCountAddress: data.nGCapacityAdd !== undefined && data.nGCapacityAdd !== null ? data.nGCapacityAdd : e.ngCountAddress,
             rejectCountAddress: data.throwCapacityAdd !== undefined && data.throwCapacityAdd !== null ? data.throwCapacityAdd : e.rejectCountAddress,
             statusAddress: data.statusAdd !== undefined && data.statusAdd !== null ? data.statusAdd : e.statusAddress,
-            alarmEndAddress: data.alarmEndSignAdd !== undefined && data.alarmEndSignAdd !== null ? data.alarmEndSignAdd : e.alarmEndAddress
+            alarmEndAddress: data.alarmEndSignAdd !== undefined && data.alarmEndSignAdd !== null ? data.alarmEndSignAdd : e.alarmEndAddress,
+            processAddress: data.processAddress !== undefined && data.processAddress !== null ? data.processAddress : e.processAddress,
+            processAddressLength: data.processAddressLength !== undefined && data.processAddressLength !== null ? data.processAddressLength : e.processAddressLength
           };
         }
         return e;
@@ -100,6 +134,19 @@ const App: React.FC = () => {
 
   const handleAddEquipment = (newEquip: Equipment) => {
     setAllEquipment(prev => [...prev, newEquip]);
+  };
+
+  const handleUpdateEquipmentOrder = (reorderedEquipment: Equipment[]) => {
+    setAllEquipment(prev => {
+      // Create a map of the new order for the specific line
+      const newOrderMap = new Map(reorderedEquipment.map((e, index) => [e.id, index]));
+      
+      // Get all equipment not in the reordered list
+      const otherEquipment = prev.filter(e => !newOrderMap.has(e.id));
+      
+      // Combine them, keeping the new order for the reordered ones
+      return [...otherEquipment, ...reorderedEquipment];
+    });
   };
 
   const handleBackToEquipment = () => {
@@ -212,6 +259,7 @@ const App: React.FC = () => {
             equipmentList={allEquipment}
             onAddEquipment={handleAddEquipment}
             onMaintainDevice={handleMaintainDevice} 
+            onUpdateEquipmentOrder={handleUpdateEquipmentOrder}
           />
         );
       case 'DEVICE_SETTINGS':

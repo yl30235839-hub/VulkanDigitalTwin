@@ -73,6 +73,8 @@ export interface Equipment {
   rejectCountAddress?: string;
   statusAddress?: string;
   alarmEndAddress?: string;
+  processAddress?: string;
+  processAddressLength?: number;
 }
 
 export interface Personnel {

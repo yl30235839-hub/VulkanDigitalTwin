@@ -5,20 +5,23 @@ import {
   ChevronLeft, 
   ChevronRight,
   Activity,
-  Layers
+  Layers,
+  RotateCw
 } from 'lucide-react';
 import { PageView } from '../types';
+import api from '../services/api';
 
 interface LayoutProps {
   children: React.ReactNode;
   currentPage: PageView;
-  onNavigate: (page: PageView) => void;
+  onNavigate: (page: PageView, data?: any) => void;
   onLogout: () => void;
   userName?: string;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLogout, userName = "Admin User" }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [isLoadingLines, setIsLoadingLines] = useState(false);
 
   const navItems = [
     ...(userName === 'admin' ? [{ id: 'LINES' as PageView, label: '工廠管理', icon: Layers }] : []),
@@ -26,6 +29,58 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
   ];
 
   const is3DMode = currentPage === '3D_VIEW';
+
+  const handleNavigation = async (page: PageView) => {
+    if (page === 'LINES') {
+      setIsLoadingLines(true);
+      try {
+        const response = await api.post(
+          'https://localhost:7044/api/Navigation/NavigateManagement',
+          {},
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        const resData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        const code = resData.code !== undefined ? resData.code : resData.Code;
+        const message = resData.message !== undefined ? resData.message : resData.Message;
+        let dataPayload = resData.data !== undefined ? resData.data : resData.Data;
+        
+        if (typeof dataPayload === 'string') {
+          try {
+            dataPayload = JSON.parse(dataPayload);
+          } catch (e) {
+            console.error("Failed to parse dataPayload", e);
+          }
+        }
+
+        if (code === 200) {
+          // 成功處理 (Success Handling)：導航並傳遞數據
+          onNavigate(page, dataPayload);
+        } else if (code === 404) {
+          // 錯誤處理 (Error Handling)：處理 404 失敗情況
+          alert(`Error: ${message || '資源未找到 (404)'}`);
+          onNavigate(page);
+        } else {
+          // 錯誤處理 (Error Handling)：其他非 200 情況
+          alert(`Error: ${message || 'Unknown error'}`);
+          onNavigate(page);
+        }
+      } catch (error: any) {
+        // 錯誤處理 (Error Handling)：捕獲請求異常
+        alert(`Network Error: ${error.message || '網絡請求異常'}`);
+        onNavigate(page);
+      } finally {
+        // 無論成功或失敗，finally 塊中都必須重置 Loading 狀態
+        setIsLoadingLines(false);
+      }
+    } else {
+      onNavigate(page);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -45,27 +100,41 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
         </div>
 
         <nav className="flex-1 py-6 space-y-2 px-2 overflow-y-auto no-scrollbar">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 group
-                ${currentPage === item.id 
-                  ? 'bg-blue-600 text-white shadow-lg' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
-            >
-              <item.icon size={24} className={`${collapsed ? 'mx-auto' : 'mr-3'} flex-shrink-0`} />
-              {!collapsed && <span className="font-medium whitespace-nowrap">{item.label}</span>}
-              
-              {/* Tooltip for collapsed state */}
-              {collapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                  {item.label}
-                </div>
-              )}
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const isLoading = item.id === 'LINES' && isLoadingLines;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavigation(item.id)}
+                disabled={isLoading}
+                className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 group
+                  ${currentPage === item.id 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  }
+                  ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+              >
+                {isLoading ? (
+                  <RotateCw size={24} className={`${collapsed ? 'mx-auto' : 'mr-3'} flex-shrink-0 animate-spin`} />
+                ) : (
+                  <item.icon size={24} className={`${collapsed ? 'mx-auto' : 'mr-3'} flex-shrink-0`} />
+                )}
+                {!collapsed && (
+                  <span className="font-medium whitespace-nowrap">
+                    {isLoading ? '處理中...' : item.label}
+                  </span>
+                )}
+                
+                {/* Tooltip for collapsed state */}
+                {collapsed && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                    {isLoading ? '處理中...' : item.label}
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-slate-800 bg-slate-950">
