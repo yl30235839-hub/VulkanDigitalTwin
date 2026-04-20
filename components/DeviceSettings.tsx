@@ -15,7 +15,7 @@ interface DeviceSettingsProps {
   onBack: () => void;
 }
 
-type TabType = 'BASIC' | 'MAPPING' | 'PROCESS_LAYOUT';
+type TabType = 'BASIC' | 'MAPPING' | 'PROCESS_MAPPING' | 'PROCESS_LAYOUT';
 type ConnectionResult = 'IDLE' | 'TESTING' | 'SUCCESS' | 'FAILED';
 
 interface TableColumn {
@@ -66,24 +66,22 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
     floor: '',
     fingerprintId: '1',
     ip: '192.168.1.100',
-    plcBrand: 'Inovance',
-    plcSeries: 'H5U',
+    plcBrand: 'Keyence',
+    plcSeries: 'Modbus TCP',
     plcPort: '8000',
     plcProtocol: 'MC Protocol (TCP)',
     plcStation: '1',
     plcDataType: 'CDAB',
+    plcReadMethod: '按位讀取',
     plcStringReverse: false,
     rack: '0',
     slot: '2',
     alarmAddress: '',
     alarmAddressLength: 0,
-    okCountAddress: '',
-    ngCountAddress: '',
-    rejectCountAddress: '',
-    statusAddress: '',
-    alarmEndAddress: '',
     processAddress: '',
-    processAddressLength: 0
+    processAddressLength: 0,
+    processParamAddress: '',
+    processParamLength: 0
   });
 
   useEffect(() => {
@@ -98,24 +96,22 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
         floor: device.floor || '',
         fingerprintId: device.fingerprintId || '1',
         ip: device.ip || '192.168.1.100',
-        plcBrand: device.plcBrand || 'Inovance',
-        plcSeries: device.plcSeries || 'H5U',
+        plcBrand: device.plcBrand || 'Keyence',
+        plcSeries: device.plcSeries || 'Modbus TCP',
         plcPort: device.plcPort || '8000',
         plcProtocol: device.plcProtocol || 'MC Protocol (TCP)',
         plcStation: device.plcStation || '1',
         plcDataType: device.plcDataType || 'CDAB',
+        plcReadMethod: device.plcReadMethod || '按位讀取',
         plcStringReverse: device.plcStringReverse || false,
         rack: '0',
         slot: '2',
         alarmAddress: device.alarmAddress || '',
         alarmAddressLength: device.alarmAddressLength || 0,
-        okCountAddress: device.okCountAddress || '',
-        ngCountAddress: device.ngCountAddress || '',
-        rejectCountAddress: device.rejectCountAddress || '',
-        statusAddress: device.statusAddress || '',
-        alarmEndAddress: device.alarmEndAddress || '',
         processAddress: device.processAddress || '',
-        processAddressLength: device.processAddressLength || 0
+        processAddressLength: device.processAddressLength || 0,
+        processParamAddress: device.processParamAddress || '',
+        processParamLength: device.processParamLength || 0
       });
     }
   }, [device]);
@@ -174,16 +170,14 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
           plcPort: parseInt(formData.plcPort) || 0,
           station: parseInt(formData.plcStation) || 0,
           dataType: formData.plcDataType,
+          readMethod: formData.plcReadMethod,
           isReverse: formData.plcStringReverse,
           alarmAddress: formData.alarmAddress,
           alarmAddressLength: formData.alarmAddressLength,
-          oKCapacityAdd: formData.okCountAddress,
-          nGCapacityAdd: formData.ngCountAddress,
-          throwCapacityAdd: formData.rejectCountAddress,
-          statusAdd: formData.statusAddress,
-          alarmEndSignAdd: formData.alarmEndAddress,
           processAddress: formData.processAddress,
-          processAddressLength: formData.processAddressLength
+          processAddressLength: formData.processAddressLength,
+          processParamAddress: formData.processParamAddress,
+          processParamLength: formData.processParamLength
         });
 
         if (response.data.code === 200) {
@@ -315,364 +309,17 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
   };
 
   const renderMappingInfo = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* DB Connection Card */}
-      <div className="lg:col-span-4 space-y-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-indigo-600 px-6 py-4 flex items-center justify-between">
-            <h3 className="text-white font-bold flex items-center">
-              <Database size={18} className="mr-2" /> 數據庫連接配置
-            </h3>
-            {dbTables.length > 0 && <span className="bg-green-400 w-2 h-2 rounded-full animate-pulse"></span>}
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase">Host IP 地址</label>
-              <div className="relative">
-                <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  value={dbConfig.host}
-                  onChange={(e) => setDbConfig({...dbConfig, host: e.target.value})}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none" 
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase">端口號</label>
-              <input 
-                type="text" 
-                value={dbConfig.port}
-                onChange={(e) => setDbConfig({...dbConfig, port: e.target.value})}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none" 
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase">用戶名</label>
-              <div className="relative">
-                <Server size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  value={dbConfig.username}
-                  onChange={(e) => setDbConfig({...dbConfig, username: e.target.value})}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" 
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase">密碼</label>
-              <div className="relative">
-                <Key size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type={dbConfig.showPassword ? 'text' : 'password'} 
-                  value={dbConfig.password}
-                  onChange={(e) => setDbConfig({...dbConfig, password: e.target.value})}
-                  className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" 
-                  placeholder="••••••••"
-                />
-                <button 
-                  onClick={() => setDbConfig({...dbConfig, showPassword: !dbConfig.showPassword})}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
-                >
-                  {dbConfig.showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-            <button 
-              onClick={handleConnectDB}
-              disabled={dbConnecting}
-              className="w-full mt-4 flex items-center justify-center py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
-            >
-              {dbConnecting ? <RotateCw size={18} className="animate-spin mr-2" /> : <Plug size={18} className="mr-2" />}
-              {dbConnecting ? '連接中...' : '連接數據庫'}
-            </button>
-          </div>
-        </div>
-
-        {/* Table Information List */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[300px]">
-          <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-700 flex items-center">
-              <ListFilter size={16} className="mr-2" /> 表信息列表
-            </h3>
-            <div className="flex items-center space-x-2">
-              <button 
-                onClick={() => setIsNewTableModalOpen(true)}
-                title="新增數據表"
-                className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors"
-              >
-                <Plus size={14} />
-              </button>
-              <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded font-bold text-slate-500">{dbTables.length} TABLES</span>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-            {dbTables.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center">
-                <TableIcon size={32} className="mb-2 opacity-20" />
-                <p className="text-xs">請先連接數據庫以獲取表列表</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {dbTables.map(table => (
-                  <button 
-                    key={table}
-                    onClick={() => handleSelectTable(table)}
-                    className={`w-full text-left px-4 py-3 rounded-lg text-xs font-bold flex items-center justify-between transition-all group ${selectedTable === table ? 'bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm' : 'text-slate-600 hover:bg-slate-50 border border-transparent'}`}
-                  >
-                    <div className="flex items-center">
-                      <TableIcon size={14} className={`mr-2 ${selectedTable === table ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'}`} />
-                      {table}
-                    </div>
-                    {selectedTable === table && <ChevronRight size={14} />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 flex flex-col items-center justify-center min-h-[400px]">
+      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+        <Database size={32} className="text-slate-400" />
       </div>
-
-      {/* Table Content Card */}
-      <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-320px)] lg:h-auto">
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center">
-            <div className={`p-2 rounded-lg mr-3 transition-colors ${isEditingTable ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
-              <TableIcon size={20} />
-            </div>
-            <div>
-              <h3 className="text-md font-bold text-slate-800">表內容預覽 {isEditingTable && <span className="ml-2 text-xs text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded">編輯模式</span>}</h3>
-              <p className="text-xs text-slate-500 font-mono">{selectedTable || '未選擇數據表'}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {selectedTable && !isEditingTable && (
-              <button 
-                onClick={startEditing}
-                className="flex items-center px-4 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm"
-              >
-                <Edit3 size={14} className="mr-1.5" /> 編輯數據
-              </button>
-            )}
-            {isEditingTable && (
-              <>
-                <button 
-                  onClick={addNewRow}
-                  className="flex items-center px-4 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-all shadow-sm"
-                >
-                  <Plus size={14} className="mr-1.5" /> 新增數據
-                </button>
-                <button 
-                  onClick={saveTableEdits}
-                  className="flex items-center px-4 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition-all shadow-md shadow-green-100"
-                >
-                  <Check size={14} className="mr-1.5" /> 保存
-                </button>
-                <button 
-                  onClick={cancelEditing}
-                  className="flex items-center px-4 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-400 hover:bg-slate-100 transition-all"
-                >
-                  <X size={14} className="mr-1.5" /> 取消
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-        
-        <div className={`flex-1 overflow-auto custom-scrollbar transition-colors ${isEditingTable ? 'bg-indigo-50/20' : 'bg-slate-50/30'}`}>
-          {!selectedTable ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 p-12 text-center">
-              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Search size={32} className="opacity-20" />
-              </div>
-              <p className="text-md font-bold text-slate-500">尚無內容可顯示</p>
-              <p className="text-sm max-w-xs mt-1">請從左側列表選擇一張表以讀取實時數據映射內容。</p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-white shadow-sm z-10">
-                <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                  <th className="px-6 py-4">ID</th>
-                  <th className="px-6 py-4">時間戳 (Timestamp)</th>
-                  <th className="px-6 py-4">數據標籤 (Tag)</th>
-                  <th className="px-6 py-4">讀值 (Value)</th>
-                  <th className="px-6 py-4 text-center">狀態</th>
-                  {isEditingTable && <th className="px-6 py-4 text-right w-20">操作</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {(isEditingTable ? editingRows : tableData).map((row, idx) => (
-                  <tr key={row.id} className={`hover:bg-indigo-50/50 transition-colors group animate-in slide-in-from-left-2 duration-300`}>
-                    <td className="px-6 py-4 text-xs font-bold text-slate-700">{row.id}</td>
-                    <td className="px-6 py-4 text-xs font-mono text-slate-500">
-                      {isEditingTable ? (
-                        <input 
-                          type="text" 
-                          value={row.timestamp} 
-                          onChange={(e) => updateRowValue(row.id, 'timestamp', e.target.value)}
-                          className="bg-transparent border-b border-transparent focus:border-indigo-400 outline-none w-full text-xs"
-                        />
-                      ) : row.timestamp}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-semibold text-indigo-600">
-                      {isEditingTable ? (
-                        <input 
-                          type="text" 
-                          value={row.source_tag} 
-                          onChange={(e) => updateRowValue(row.id, 'source_tag', e.target.value)}
-                          className="bg-transparent border-b border-indigo-200 focus:border-indigo-600 outline-none w-full text-xs font-bold"
-                        />
-                      ) : row.source_tag}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-800">
-                      {isEditingTable ? (
-                        <input 
-                          type="text" 
-                          value={row.value} 
-                          onChange={(e) => updateRowValue(row.id, 'value', e.target.value)}
-                          className="bg-transparent border-b border-indigo-200 focus:border-indigo-600 outline-none w-20 text-sm font-bold text-slate-900"
-                        />
-                      ) : row.value}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {isEditingTable ? (
-                        <select 
-                          value={row.status}
-                          onChange={(e) => updateRowValue(row.id, 'status', e.target.value)}
-                          className="bg-white border border-slate-200 rounded px-2 py-0.5 text-[10px] outline-none"
-                        >
-                          <option value="VALID">VALID</option>
-                          <option value="ERROR">ERROR</option>
-                        </select>
-                      ) : (
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${row.status === 'VALID' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {row.status}
-                        </span>
-                      )}
-                    </td>
-                    {isEditingTable && (
-                      <td className="px-6 py-4 text-right">
-                        <button 
-                          onClick={() => deleteRow(row.id)}
-                          className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                          title="刪除此行"
-                        >
-                          <Trash size={14} />
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-        
-        {selectedTable && (
-          <div className="px-6 py-3 border-t border-slate-100 bg-white flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400">總計：{(isEditingTable ? editingRows : tableData).length} 條紀錄</span>
-            {!isEditingTable && <button className="text-[10px] font-bold text-indigo-600 hover:underline">導出映射 CSV</button>}
-          </div>
-        )}
-      </div>
-
-      {/* New Table Modal */}
-      {isNewTableModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 bg-indigo-600 text-white flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <Layout size={20} />
-                <h3 className="font-bold">創建新數據表結構</h3>
-              </div>
-              <button onClick={() => setIsNewTableModalOpen(false)} className="text-white/60 hover:text-white transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 flex items-center">
-                  <Database size={14} className="mr-2 text-indigo-600" /> 表名稱 (Table Name)
-                </label>
-                <input 
-                  type="text" 
-                  value={newTableName}
-                  onChange={(e) => setNewTableName(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm"
-                  placeholder="e.g. Production_Quality_Log"
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <label className="text-sm font-bold text-slate-700 flex items-center">
-                    <Columns size={14} className="mr-2 text-indigo-600" /> 列結構定義 (Columns)
-                  </label>
-                  <button 
-                    onClick={handleAddColumn}
-                    className="flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors"
-                  >
-                    <Plus size={14} className="mr-1" /> 添加列
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {newTableColumns.map((col, index) => (
-                    <div key={col.id} className="flex items-center space-x-3 group animate-in slide-in-from-right-2 duration-300">
-                      <div className="text-[10px] font-bold text-slate-300 w-4">{index + 1}</div>
-                      <input 
-                        type="text"
-                        value={col.name}
-                        onChange={(e) => handleUpdateColumn(col.id, 'name', e.target.value)}
-                        placeholder="列名"
-                        className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 outline-none"
-                      />
-                      <select 
-                        value={col.type}
-                        onChange={(e) => handleUpdateColumn(col.id, 'type', e.target.value)}
-                        className="w-32 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none bg-slate-50"
-                      >
-                        <option value="INT">INT</option>
-                        <option value="VARCHAR">VARCHAR</option>
-                        <option value="DATETIME">DATETIME</option>
-                        <option value="FLOAT">FLOAT</option>
-                        <option value="BOOLEAN">BOOLEAN</option>
-                        <option value="TEXT">TEXT</option>
-                      </select>
-                      <button 
-                        onClick={() => handleDeleteColumn(col.id)}
-                        disabled={newTableColumns.length <= 1}
-                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-0"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-end space-x-4">
-              <button 
-                onClick={() => setIsNewTableModalOpen(false)}
-                className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700"
-              >
-                取消
-              </button>
-              <button 
-                onClick={handleSaveNewTable}
-                className="flex items-center px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
-              >
-                <Save size={18} className="mr-2" /> 保存數據表
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <h3 className="text-lg font-bold text-slate-700 mb-2">數據映射管理已清理</h3>
+      <p className="text-sm text-slate-500 text-center max-w-md">
+        現有的數據庫展示內容已清除，為後續的更新做準備。
+      </p>
     </div>
   );
+
 
   if (!device) return <div className="p-8 text-center text-red-500">Device not found</div>;
 
@@ -843,53 +490,33 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">OK計數地址</label>
+                      <label className="text-sm font-semibold text-slate-700">讀取方式</label>
+                      <select 
+                        value={formData.plcReadMethod} 
+                        onChange={(e) => setFormData({...formData, plcReadMethod: e.target.value})} 
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all"
+                      >
+                        <option value="按字讀取">按字讀取</option>
+                        <option value="按位讀取">按位讀取</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-slate-700">工藝參數地址</label>
                       <input 
                         type="text" 
-                        value={formData.okCountAddress} 
-                        onChange={(e) => setFormData({...formData, okCountAddress: e.target.value})} 
+                        value={formData.processParamAddress} 
+                        onChange={(e) => setFormData({...formData, processParamAddress: e.target.value})} 
                         className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
                         placeholder="例如: D1100"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">NG計數地址</label>
+                      <label className="text-sm font-semibold text-slate-700">工藝參數長度</label>
                       <input 
-                        type="text" 
-                        value={formData.ngCountAddress} 
-                        onChange={(e) => setFormData({...formData, ngCountAddress: e.target.value})} 
+                        type="number" 
+                        value={formData.processParamLength} 
+                        onChange={(e) => setFormData({...formData, processParamLength: parseInt(e.target.value) || 0})} 
                         className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                        placeholder="例如: D1102"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">抛料數地址</label>
-                      <input 
-                        type="text" 
-                        value={formData.rejectCountAddress} 
-                        onChange={(e) => setFormData({...formData, rejectCountAddress: e.target.value})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                        placeholder="例如: D1104"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">設備狀態地址</label>
-                      <input 
-                        type="text" 
-                        value={formData.statusAddress} 
-                        onChange={(e) => setFormData({...formData, statusAddress: e.target.value})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                        placeholder="例如: D1106"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">報警結束地址</label>
-                      <input 
-                        type="text" 
-                        value={formData.alarmEndAddress} 
-                        onChange={(e) => setFormData({...formData, alarmEndAddress: e.target.value})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                        placeholder="例如: D1108"
                       />
                     </div>
                   </div>
@@ -912,6 +539,13 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
                   {isTesting ? <RotateCw size={18} className="animate-spin mr-2" /> : <Zap size={18} className="mr-2" />}
                   {isTesting ? '處理中...' : '測試設備連線'}
                 </button>
+            <button 
+              onClick={() => (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && setActiveTab('PROCESS_MAPPING')} 
+              disabled={device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'PROCESS_MAPPING' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} ${device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment ? 'opacity-30 cursor-not-allowed' : ''}`}
+            >
+              工藝映射管理
+            </button>
               </div>
             </div>
           </div>
@@ -949,18 +583,35 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
               數據映射管理
             </button>
             <button 
+              onClick={() => (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && setActiveTab('PROCESS_MAPPING')} 
+              disabled={device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'PROCESS_MAPPING' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} ${device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment ? 'opacity-30 cursor-not-allowed' : ''}`}
+            >
+              工藝映射管理
+            </button>
+            <button 
               onClick={() => (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && setActiveTab('PROCESS_LAYOUT')} 
               disabled={device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment}
               className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'PROCESS_LAYOUT' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} ${device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment ? 'opacity-30 cursor-not-allowed' : ''}`}
             >
               工藝排佈
-            </button>
-         </div>
+            </button></div>
       </div>
 
       <div>
         {activeTab === 'BASIC' && renderBasicInfo()}
         {activeTab === 'MAPPING' && renderMappingInfo()}
+        {activeTab === 'PROCESS_MAPPING' && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 flex flex-col items-center justify-center min-h-[400px]">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <Database size={32} className="text-slate-400" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-700 mb-2">工藝映射管理模塊</h3>
+            <p className="text-sm text-slate-500 text-center max-w-md">
+              此功能暫時為空，為後續功能更新預留。
+            </p>
+          </div>
+        )}
         {activeTab === 'PROCESS_LAYOUT' && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
             <div className="flex items-center mb-6">

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { PageView } from '../types';
 import api from '../services/api';
+import { backendDomain } from '../constants';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -35,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
       setIsLoadingLines(true);
       try {
         const response = await api.post(
-          'https://localhost:7044/api/Navigation/NavigateManagement',
+          `${backendDomain}/api/Navigation/NavigateManagement`,
           {},
           {
             headers: {

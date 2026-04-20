@@ -11,7 +11,7 @@ import FACAManagement from './components/FACAManagement';
 import YieldAnalysis from './components/YieldAnalysis';
 import IntelligentMonitoring from './components/IntelligentMonitoring';
 import ScrapRateAnalysis from './components/ScrapRateAnalysis';
-import { PageView, Equipment, ProductionLine, FACAPendingItem, Personnel, UserData } from './types';
+import { PageView, Equipment, ProductionLine, FACAPendingItem, Personnel, UserData, LineType, MachineStatus } from './types';
 import { MOCK_EQUIPMENT, MOCK_LINES, INITIAL_PERSONNEL } from './constants';
 
 const App: React.FC = () => {
@@ -109,16 +109,14 @@ const App: React.FC = () => {
             plcPort: data.plcPort !== undefined && data.plcPort !== null ? data.plcPort.toString() : e.plcPort,
             plcStation: data.station !== undefined && data.station !== null ? data.station.toString() : e.plcStation,
             plcDataType: data.dataType !== undefined && data.dataType !== null ? data.dataType : e.plcDataType,
+            plcReadMethod: data.readMethod !== undefined && data.readMethod !== null ? data.readMethod : e.plcReadMethod,
             plcStringReverse: data.isReverse !== undefined && data.isReverse !== null ? data.isReverse : e.plcStringReverse,
             alarmAddress: data.alarmAddress !== undefined && data.alarmAddress !== null ? data.alarmAddress : e.alarmAddress,
             alarmAddressLength: data.alarmAddressLength !== undefined && data.alarmAddressLength !== null ? data.alarmAddressLength : e.alarmAddressLength,
-            okCountAddress: data.oKCapacityAdd !== undefined && data.oKCapacityAdd !== null ? data.oKCapacityAdd : e.okCountAddress,
-            ngCountAddress: data.nGCapacityAdd !== undefined && data.nGCapacityAdd !== null ? data.nGCapacityAdd : e.ngCountAddress,
-            rejectCountAddress: data.throwCapacityAdd !== undefined && data.throwCapacityAdd !== null ? data.throwCapacityAdd : e.rejectCountAddress,
-            statusAddress: data.statusAdd !== undefined && data.statusAdd !== null ? data.statusAdd : e.statusAddress,
-            alarmEndAddress: data.alarmEndSignAdd !== undefined && data.alarmEndSignAdd !== null ? data.alarmEndSignAdd : e.alarmEndAddress,
             processAddress: data.processAddress !== undefined && data.processAddress !== null ? data.processAddress : e.processAddress,
-            processAddressLength: data.processAddressLength !== undefined && data.processAddressLength !== null ? data.processAddressLength : e.processAddressLength
+            processAddressLength: data.processAddressLength !== undefined && data.processAddressLength !== null ? data.processAddressLength : e.processAddressLength,
+            processParamAddress: data.processParamAddress !== undefined && data.processParamAddress !== null ? data.processParamAddress : e.processParamAddress,
+            processParamLength: data.processParamLength !== undefined && data.processParamLength !== null ? data.processParamLength : e.processParamLength
           };
         }
         return e;

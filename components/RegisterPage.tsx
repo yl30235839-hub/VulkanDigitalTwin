@@ -7,6 +7,7 @@ import {
   UserCheck, Zap, Monitor, Settings, CheckSquare, Square,
   X, LockKeyhole, RefreshCw
 } from 'lucide-react';
+import { backendDomain } from '../constants';
 
 interface RegisterPageProps {
   onBack: () => void;
@@ -130,7 +131,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({
       };
 
       // Call API
-      const response = await api.post('https://localhost:7044/api/CheckIn/AddUser', requestBody);
+      const response = await api.post(`${backendDomain}/api/CheckIn/AddUser`, requestBody);
       const { code, message, data } = response.data;
 
       if (code === 200) {
@@ -180,7 +181,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({
       for (let count = 1; count <= 3; count++) {
         setFingerprintStatus(`正在采集指紋1 (第 ${count} 次)，請按下手指...`);
         
-        const response = await api.post('https://localhost:7044/api/CheckIn/ABFingerRegister', {
+        const response = await api.post(`${backendDomain}/api/CheckIn/ABFingerRegister`, {
           lineSystemName: lineSystemName,
           equipmentSystemName: equipmentSystemName,
           fingerNo: 'A',
@@ -221,7 +222,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({
     setFingerprintStatus('正在驗證指紋1，請按下手指...');
     
     try {
-      const response = await api.post('https://localhost:7044/api/CheckIn/ABFingerVerify', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/ABFingerVerify`, {
         lineSystemName: lineSystemName,
         equipmentSystemName: equipmentSystemName,
         fingerNo: 'A'
@@ -260,7 +261,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({
       for (let count = 1; count <= 3; count++) {
         setFingerprintStatus2(`正在采集指紋2 (第 ${count} 次)，請按下手指...`);
         
-        const response = await api.post('https://localhost:7044/api/CheckIn/ABFingerRegister', {
+        const response = await api.post(`${backendDomain}/api/CheckIn/ABFingerRegister`, {
           lineSystemName: lineSystemName,
           equipmentSystemName: equipmentSystemName,
           fingerNo: 'B',
@@ -300,7 +301,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({
     setFingerprintStatus2('正在驗證指紋2，請按下手指...');
     
     try {
-      const response = await api.post('https://localhost:7044/api/CheckIn/ABFingerVerify', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/ABFingerVerify`, {
         lineSystemName: lineSystemName,
         equipmentSystemName: equipmentSystemName,
         fingerNo: 'B'

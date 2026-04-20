@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import { backendDomain } from '../constants';
 
 // Create a customized axios instance
 const api = axios.create({
@@ -31,7 +32,7 @@ api.interceptors.response.use(
   (error) => {
     // Specialized handling for "Network Error" which occurs when the local server is unreachable
     if (error.message === 'Network Error') {
-      console.error('MES API Network Error: The local server at https://localhost:7044 may be offline or CORS is not configured.');
+      console.error(`MES API Network Error: The local server at ${backendDomain} may be offline or CORS is not configured.`);
     }
     
     if (error.response?.status === 401) {

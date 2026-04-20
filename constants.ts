@@ -54,3 +54,5 @@ export const MOCK_FACTORIES: Factory[] = [
 export const MOCK_LINES: ProductionLine[] = [];
 
 export const MOCK_EQUIPMENT: Equipment[] = [];
+
+export const backendDomain = 'https://localhost:7044';

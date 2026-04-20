@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, User, Lock, ArrowRight } from 'lucide-react';
 import api from '../services/api';
+import { backendDomain } from '../constants';
 
 interface LoginPageProps {
   onLogin: (username: string) => void;
@@ -33,7 +34,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister }) => {
 
     // 2. API-based login for other credentials
     try {
-      const response = await api.post('https://localhost:7044/api/Login/LoginSystem', {
+      const response = await api.post(`${backendDomain}/api/Login/LoginSystem`, {
         userID: username,
         userPassword: password
       });
@@ -52,7 +53,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister }) => {
       // Error Handling
       console.error('Login API Error:', err);
       if (err.message === 'Network Error') {
-        setError('網絡錯誤：無法連接至 https://localhost:7044。請確保服務已啟動。');
+        setError(`網絡錯誤：無法連接至 ${backendDomain}。請確保服務已啟動。`);
       } else {
         setError(err.response?.data?.message || '登入系統發生異常，請稍後再試。');
       }

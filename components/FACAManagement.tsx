@@ -10,6 +10,7 @@ import {
   Package, PlusCircle, XCircle, Info, X, IdCard, Building2,
   MessageSquare, Sparkles
 } from 'lucide-react';
+import { backendDomain } from '../constants';
 
 interface FACALibrary {
   AlarmLevel1: string;
@@ -235,7 +236,7 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
 
     setIsLoadingFaca(true);
     try {
-      const response = await fetch('https://localhost:7044/api/FACA/ClickAlarm', {
+      const response = await fetch(`${backendDomain}/api/FACA/ClickAlarm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -395,7 +396,7 @@ const FACAManagement: React.FC<FACAManagementProps> = ({ onBack, pendingItems, s
         }
       };
 
-      const response = await fetch('https://localhost:7044/api/FACA/FACAUpload', {
+      const response = await fetch(`${backendDomain}/api/FACA/FACAUpload`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -65,16 +65,14 @@ export interface Equipment {
   plcProtocol?: string;
   plcStation?: string;
   plcDataType?: string;
+  plcReadMethod?: string;
   plcStringReverse?: boolean;
   alarmAddress?: string;
   alarmAddressLength?: number;
-  okCountAddress?: string;
-  ngCountAddress?: string;
-  rejectCountAddress?: string;
-  statusAddress?: string;
-  alarmEndAddress?: string;
   processAddress?: string;
   processAddressLength?: number;
+  processParamAddress?: string;
+  processParamLength?: number;
 }
 
 export interface Personnel {

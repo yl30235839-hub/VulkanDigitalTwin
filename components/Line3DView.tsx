@@ -11,6 +11,7 @@ import {
   Scan, ShieldCheck, FileWarning, MessageSquare, Edit3, Fingerprint, Monitor
 } from 'lucide-react';
 import { Equipment, MachineStatus, EquipmentType, FACAPendingItem, FACATipsMessage, AlarmRecordModel, ProductionLine, PageView } from '../types';
+import { backendDomain } from '../constants';
 
 // Fix: Extend the JSX namespace to include Three.js intrinsic elements provided by React Three Fiber.
 declare global {
@@ -50,97 +51,200 @@ interface ItemProps {
 }
 
 const IndustrialMachine: React.FC<{ isSelected: boolean, hovered: boolean, status?: MachineStatus }> = ({ isSelected, hovered, status }) => {
-  const W = 3.2, H = 3.4, D = 2.8;
+  const W = 3.8, H = 3.4, D = 2.8;
   const baseY = 1.7; 
 
-  const bodyColor = isSelected ? '#3b82f6' : hovered ? '#94a3b8' : '#b0b8c4';
+  const bodyColor = isSelected ? '#60a5fa' : hovered ? '#f1f5f9' : '#e2e8f0'; // Light grey panels
+  const frameColor = '#1e293b'; // Dark grey/black frame
+  const controlPanelColor = '#334155'; // Darker grey for control panel area
   
   return (
     <group scale={0.6}>
-      {/* Base platform */}
-      <mesh position={[0, baseY - H / 2 + 0.06, 0]}>
-        <boxGeometry args={[W + 0.1, 0.12, D + 0.1]} />
-        <meshStandardMaterial color="#151d25" roughness={0.9} metalness={0.1} />
+      {/* Base frame */}
+      <mesh position={[0, baseY - H / 2 + 0.05, 0]}>
+        <boxGeometry args={[W, 0.1, D]} />
+        <meshStandardMaterial color={frameColor} roughness={0.8} metalness={0.2} />
       </mesh>
 
-      {/* Main right panel */}
-      <mesh position={[W / 2 - 0.55, baseY, 0]}>
-        <boxGeometry args={[1.1, H - 0.4, D]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.7} />
+      {/* Bottom Cabinet Panels (Light Grey) */}
+      {/* Front bottom left panel */}
+      <mesh position={[-0.8, 0.8625, D/2 - 0.1]}>
+        <boxGeometry args={[1.85, 1.525, 0.05]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.2} />
+      </mesh>
+      {/* Front bottom right panel */}
+      <mesh position={[1.0, 0.8625, D/2 - 0.1]}>
+        <boxGeometry args={[1.45, 1.525, 0.05]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.2} />
+      </mesh>
+      
+      {/* Side bottom panels */}
+      <mesh position={[1.8, 0.8625, 0]}>
+        <boxGeometry args={[0.05, 1.525, 2.45]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.2} />
+      </mesh>
+      <mesh position={[-1.8, 0.8625, 0]}>
+        <boxGeometry args={[0.05, 1.525, 2.45]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.2} />
       </mesh>
 
-      {/* Left frame panel */}
-      <mesh position={[-W / 2 + 0.06, baseY, 0]}>
-        <boxGeometry args={[0.12, H - 0.4, D]} />
-        <meshStandardMaterial color="#2a3542" roughness={0.3} metalness={0.9} />
+      {/* Back panel (Full height) */}
+      <mesh position={[0, baseY, -D / 2 + 0.05]}>
+        <boxGeometry args={[W - 0.1, H - 0.1, 0.05]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.2} />
       </mesh>
 
-      {/* Back panel */}
-      <mesh position={[0, baseY, -D / 2 + 0.06]}>
-        <boxGeometry args={[W, H - 0.4, 0.12]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.7} />
-      </mesh>
-
-      {/* Roof */}
-      <mesh position={[0, baseY + H / 2 - 0.2, 0]}>
-        <boxGeometry args={[W + 0.05, 0.12, D + 0.05]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.7} />
-      </mesh>
-
-      {/* Front bottom panel */}
-      <mesh position={[0, baseY - H / 2 + 0.55, D / 2 - 0.06]}>
-        <boxGeometry args={[W, 0.9, 0.12]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.7} />
-      </mesh>
-
-      {/* Pillars */}
+      {/* Main Frame Pillars */}
       {[
-        [-W / 2 + 0.08, baseY, D / 2 - 0.08],
-        [-W / 2 + 0.08, baseY, -D / 2 + 0.08],
-        [W / 2 - 0.08, baseY, D / 2 - 0.08],
-        [W / 2 - 0.08, baseY, -D / 2 + 0.08],
+        [-W / 2 + 0.1, baseY, D / 2 - 0.1],
+        [-W / 2 + 0.1, baseY, -D / 2 + 0.1],
+        [W / 2 - 0.1, baseY, D / 2 - 0.1],
+        [W / 2 - 0.1, baseY, -D / 2 + 0.1],
+        // Middle pillar front
+        [0.2, baseY, D / 2 - 0.1],
       ].map((pos, i) => (
         <mesh key={i} position={pos as [number, number, number]}>
-          <boxGeometry args={[0.14, H - 0.3, 0.14]} />
-          <meshStandardMaterial color="#2a3542" />
+          <boxGeometry args={[0.15, H, 0.15]} />
+          <meshStandardMaterial color={frameColor} roughness={0.7} metalness={0.3} />
         </mesh>
       ))}
 
-      {/* Glass Panels */}
-      <mesh position={[-W / 2 + 0.72, baseY + 0.3, D / 2 - 0.02]}>
-        <boxGeometry args={[1.0, H - 0.6, 0.04]} />
-        <meshStandardMaterial color="#88ccdd" transparent opacity={0.2} side={THREE.DoubleSide} />
+      {/* Horizontal Frame Bars */}
+      <mesh position={[-W/4 + 0.1, baseY, D / 2 - 0.1]}>
+        <boxGeometry args={[W/2 + 0.2, 0.15, 0.15]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} metalness={0.3} />
       </mesh>
-      <mesh position={[-0.05, baseY + 0.75, D / 2 - 0.02]}>
-        <boxGeometry args={[0.8, (H - 0.6) * 0.55, 0.04]} />
-        <meshStandardMaterial color="#88ccdd" transparent opacity={0.2} side={THREE.DoubleSide} />
+      <mesh position={[0, baseY, -D / 2 + 0.1]}>
+        <boxGeometry args={[W, 0.15, 0.15]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} metalness={0.3} />
+      </mesh>
+      <mesh position={[-W/2 + 0.1, baseY, 0]}>
+        <boxGeometry args={[0.15, 0.15, D]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} metalness={0.3} />
+      </mesh>
+      <mesh position={[W/2 - 0.1, baseY, 0]}>
+        <boxGeometry args={[0.15, 0.15, D]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} metalness={0.3} />
       </mesh>
 
-      {/* Signal Tower */}
-      <group position={[0.1, baseY + H / 2 - 0.2, -0.1]}>
-         <mesh position={[0, 0.18, 0]}>
-            <cylinderGeometry args={[0.03, 0.03, 0.35, 8]} />
-            <meshStandardMaterial color="#2a3542" />
-         </mesh>
-         <mesh position={[0, 0.38, 0]}>
-            <cylinderGeometry args={[0.07, 0.07, 0.1, 12]} />
-            <meshStandardMaterial color={status === MachineStatus.Stopped ? "#ff2200" : "#330000"} emissive="#ff0000" emissiveIntensity={status === MachineStatus.Stopped ? 1 : 0} />
-         </mesh>
-         <mesh position={[0, 0.5, 0]}>
-            <cylinderGeometry args={[0.07, 0.07, 0.1, 12]} />
-            <meshStandardMaterial color={status === MachineStatus.Warning ? "#ffcc00" : "#332200"} emissive="#ffaa00" emissiveIntensity={status === MachineStatus.Warning ? 1 : 0} />
-         </mesh>
-         <mesh position={[0, 0.62, 0]}>
-            <cylinderGeometry args={[0.07, 0.07, 0.1, 12]} />
-            <meshStandardMaterial color={status === MachineStatus.Running ? "#00ff44" : "#003311"} emissive="#00cc22" emissiveIntensity={status === MachineStatus.Running ? 1 : 0} />
-         </mesh>
-      </group>
+      {/* Top Frame Bars */}
+      <mesh position={[0, baseY + H / 2 - 0.1, D / 2 - 0.1]}>
+        <boxGeometry args={[W, 0.2, 0.2]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} metalness={0.3} />
+      </mesh>
+      <mesh position={[0, baseY + H / 2 - 0.1, -D / 2 + 0.1]}>
+        <boxGeometry args={[W, 0.2, 0.2]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} metalness={0.3} />
+      </mesh>
+
+      {/* Roof */}
+      <mesh position={[0, baseY + H / 2, 0]}>
+        <boxGeometry args={[W, 0.1, D]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.2} />
+      </mesh>
+      {/* Roof Chamfer Front */}
+      <mesh position={[0, baseY + H / 2 - 0.05, D / 2 - 0.02]} rotation={[Math.PI / 4, 0, 0]}>
+        <boxGeometry args={[W, 0.2, 0.2]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.4} metalness={0.2} />
+      </mesh>
+
+      {/* Control Panel Area (Right Side Front) */}
+      <mesh position={[1.0, 2.4875, D/2 - 0.1]}>
+        <boxGeometry args={[1.45, 1.425, 0.06]} />
+        <meshStandardMaterial color={controlPanelColor} roughness={0.6} metalness={0.4} />
+      </mesh>
 
       {/* Control Panel Screen */}
-      <mesh position={[W / 2 - 0.57, baseY + 0.6, D / 2 - 0.04]}>
-        <boxGeometry args={[0.7, 0.5, 0.04]} />
-        <meshStandardMaterial color="#0077aa" emissive="#003366" emissiveIntensity={0.8} />
+      <mesh position={[1.0, 2.7, D/2 - 0.06]}>
+        <boxGeometry args={[0.7, 0.45, 0.02]} />
+        <meshStandardMaterial color="#3b82f6" emissive="#1d4ed8" emissiveIntensity={0.5} />
       </mesh>
+
+      {/* Control Panel Buttons */}
+      <group position={[1.0, 2.3, D/2 - 0.06]}>
+        <mesh position={[-0.2, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 0.02, 16]} />
+          <meshStandardMaterial color="#ef4444" />
+        </mesh>
+        <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 0.02, 16]} />
+          <meshStandardMaterial color="#eab308" />
+        </mesh>
+        <mesh position={[0.2, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 0.02, 16]} />
+          <meshStandardMaterial color="#22c55e" />
+        </mesh>
+      </group>
+
+      {/* Glass Windows (Left Side Front) */}
+      <mesh position={[-0.8, 2.4875, D/2 - 0.1]}>
+        <boxGeometry args={[1.85, 1.425, 0.02]} />
+        <meshStandardMaterial color="#94a3b8" transparent opacity={0.2} side={THREE.DoubleSide} metalness={0.8} roughness={0.1} />
+      </mesh>
+
+      {/* Internal Conveyor/Mechanism */}
+      <group position={[-W/4 - 0.3, baseY, 0]}>
+        {/* Conveyor Tracks */}
+        <mesh position={[0, -0.1, 0.4]}>
+          <boxGeometry args={[W/2, 0.05, 0.2]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, -0.1, -0.4]}>
+          <boxGeometry args={[W/2, 0.05, 0.2]} />
+          <meshStandardMaterial color="#334155" roughness={0.8} />
+        </mesh>
+        {/* Mechanism parts bridging tracks */}
+        <mesh position={[0, 0.1, 0]}>
+          <boxGeometry args={[0.6, 0.1, 1.0]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.6} roughness={0.4} />
+        </mesh>
+        <mesh position={[-0.2, 0.2, 0]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.3]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.8} />
+        </mesh>
+        <mesh position={[0.2, 0.2, 0]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.3]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.8} />
+        </mesh>
+      </group>
+
+      {/* Signal Towers */}
+      <group position={[-0.5, baseY + H / 2 + 0.1, 0]}>
+         <mesh position={[0, 0.15, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.3, 8]} />
+            <meshStandardMaterial color="#1e293b" />
+         </mesh>
+         <mesh position={[0, 0.35, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.1, 16]} />
+            <meshStandardMaterial color={status === MachineStatus.Stopped ? "#ef4444" : "#450a0a"} emissive="#ef4444" emissiveIntensity={status === MachineStatus.Stopped ? 1 : 0} />
+         </mesh>
+         <mesh position={[0, 0.47, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.1, 16]} />
+            <meshStandardMaterial color={status === MachineStatus.Warning ? "#eab308" : "#422006"} emissive="#eab308" emissiveIntensity={status === MachineStatus.Warning ? 1 : 0} />
+         </mesh>
+         <mesh position={[0, 0.59, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.1, 16]} />
+            <meshStandardMaterial color={status === MachineStatus.Running ? "#22c55e" : "#052e16"} emissive="#22c55e" emissiveIntensity={status === MachineStatus.Running ? 1 : 0} />
+         </mesh>
+      </group>
+      <group position={[0.5, baseY + H / 2 + 0.1, 0]}>
+         <mesh position={[0, 0.15, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.3, 8]} />
+            <meshStandardMaterial color="#1e293b" />
+         </mesh>
+         <mesh position={[0, 0.35, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.1, 16]} />
+            <meshStandardMaterial color={status === MachineStatus.Stopped ? "#ef4444" : "#450a0a"} emissive="#ef4444" emissiveIntensity={status === MachineStatus.Stopped ? 1 : 0} />
+         </mesh>
+         <mesh position={[0, 0.47, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.1, 16]} />
+            <meshStandardMaterial color={status === MachineStatus.Warning ? "#eab308" : "#422006"} emissive="#eab308" emissiveIntensity={status === MachineStatus.Warning ? 1 : 0} />
+         </mesh>
+         <mesh position={[0, 0.59, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.1, 16]} />
+            <meshStandardMaterial color={status === MachineStatus.Running ? "#22c55e" : "#052e16"} emissive="#22c55e" emissiveIntensity={status === MachineStatus.Running ? 1 : 0} />
+         </mesh>
+      </group>
     </group>
   );
 };
@@ -460,7 +564,7 @@ const FactoryScene: React.FC<{
   }, [equipmentList, lines]);
 
   const rowSpacing = 20;
-  const columnSpacing = 5;
+  const columnSpacing = 7.6; // Width of MachineModel (3.8 * 2) to make gap 0
 
   return (
     <>
@@ -626,7 +730,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
 
   useEffect(() => {
     const newConnection = new HubConnectionBuilder()
-      .withUrl('https://localhost:7044/notificationHub')
+      .withUrl(`${backendDomain}/notificationHub`)
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Information)
       .build();
@@ -754,7 +858,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
     setIsRunningLoading(true);
     try {
       // Using the original URL from document as requested
-      const response = await api.post('https://localhost:7044/api/Run/Running', {});
+      const response = await api.post(`${backendDomain}/api/Run/Running`, {});
       
       const { code, message } = response.data;
       
@@ -788,7 +892,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
     if (!selectedItem || selectedItem.type !== EquipmentType.CheckinEquipment) return;
 
     try {
-      const response = await api.post('https://localhost:7044/api/CheckIn/CheckInBegin', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/CheckInBegin`, {
         lineSystemName: selectedItem.lineId,
         equipmentSystemName: selectedItem.id
       });
@@ -841,7 +945,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
     if (!selectedItem || selectedItem.type !== EquipmentType.CheckinEquipment) return;
 
     try {
-      const response = await api.post('https://localhost:7044/api/CheckIn/CheckInEnd', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/CheckInEnd`, {
         lineSystemName: selectedItem.lineId,
         equipmentSystemName: selectedItem.id
       });
@@ -877,7 +981,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
     const fingerNo = parseInt(selectedItem.fingerprintId || '1', 10);
 
     try {
-      const response = await api.post('https://localhost:7044/api/CheckIn/MakeUpVerification', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/MakeUpVerification`, {
         lineSystemName: selectedItem.lineId,
         equipmentSystemName: selectedItem.id
       });
@@ -932,7 +1036,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
     try {
       const finalReason = retroForm.missedReason === '其他' ? retroForm.otherReason : retroForm.missedReason;
       
-      const response = await api.post('https://localhost:7044/api/CheckIn/MakeUpRecord', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/MakeUpRecord`, {
         missedDate: retroForm.date,
         missedPeriod: retroForm.timeSlot,
         missedReason: finalReason
@@ -993,7 +1097,7 @@ const Line3DView: React.FC<Line3DViewProps> = ({
     setIsCancelingRetro(true);
 
     try {
-      await api.post('https://localhost:7044/api/CheckIn/MakeUpCancel', {
+      await api.post(`${backendDomain}/api/CheckIn/MakeUpCancel`, {
         lineSystemName: selectedItem.lineId,
         equipmentSystemName: selectedItem.id
       });
