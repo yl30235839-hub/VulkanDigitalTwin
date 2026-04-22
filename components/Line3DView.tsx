@@ -56,7 +56,7 @@ const IndustrialMachine: React.FC<{ isSelected: boolean, hovered: boolean, statu
 
   const bodyColor = isSelected ? '#60a5fa' : hovered ? '#f1f5f9' : '#e2e8f0'; // Light grey panels
   const frameColor = '#1e293b'; // Dark grey/black frame
-  const controlPanelColor = '#334155'; // Darker grey for control panel area
+  const controlPanelColor = '#323232'; // Darker grey for control panel area
   
   return (
     <group scale={0.6}>
@@ -110,8 +110,8 @@ const IndustrialMachine: React.FC<{ isSelected: boolean, hovered: boolean, statu
       ))}
 
       {/* Horizontal Frame Bars */}
-      <mesh position={[-W/4 + 0.1, baseY, D / 2 - 0.1]}>
-        <boxGeometry args={[W/2 + 0.2, 0.15, 0.15]} />
+      <mesh position={[0, baseY, D / 2 - 0.1]}>
+        <boxGeometry args={[W, 0.15, 0.15]} />
         <meshStandardMaterial color={frameColor} roughness={0.7} metalness={0.3} />
       </mesh>
       <mesh position={[0, baseY, -D / 2 + 0.1]}>
@@ -564,7 +564,7 @@ const FactoryScene: React.FC<{
   }, [equipmentList, lines]);
 
   const rowSpacing = 20;
-  const columnSpacing = 7.6; // Width of MachineModel (3.8 * 2) to make gap 0
+  const columnSpacing = 4.56; // Adjusted to match actual model width (W:3.8 * Scale:2 * InnerScale:0.6) to make them physically connected
 
   return (
     <>

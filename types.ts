@@ -41,6 +41,27 @@ export interface ProductionLine {
   targetOutput: number;
 }
 
+export enum StorageRequestType {
+  Loading = '上料',
+  Unloading = '下料'
+}
+
+export enum StoragePriority {
+  Normal = '正常',
+  Urgent = '緊急',
+  VeryUrgent = '非常緊急'
+}
+
+export interface StorageLocation {
+  id: string;
+  productInfo: string;
+  requestType: StorageRequestType;
+  equipmentId: string;
+  lineId: string;
+  priority: StoragePriority;
+  quantity: number;
+}
+
 export interface Equipment {
   id: string;
   lineId: string;
@@ -73,6 +94,12 @@ export interface Equipment {
   processAddressLength?: number;
   processParamAddress?: string;
   processParamLength?: number;
+  bitLength?: string;
+  // AGV Order Management fields
+  agvOrderRequestUrl?: string;
+  agvOrderEndUrl?: string;
+  agvOrderPriorityUrl?: string;
+  storageLocations?: StorageLocation[];
 }
 
 export interface Personnel {

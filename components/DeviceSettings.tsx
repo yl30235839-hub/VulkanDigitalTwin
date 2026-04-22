@@ -1,13 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Equipment, MachineStatus, EquipmentType } from '../types';
+import { Equipment, MachineStatus, EquipmentType, StorageLocation, StorageRequestType, StoragePriority } from '../types';
 import api from '../services/api';
 import { 
   ArrowLeft, Save, Activity, Settings, 
-  Cpu, Zap, Database, Plug, Plus, Trash2, Server,
+  Cpu, Zap, Database, Plug, Plus, Trash2, Server, Truck, Package,
   Table as TableIcon, MapPin, X, ChevronRight, Edit3, Building, Hash, Fingerprint,
   Radio, Network, Globe, Shield, RotateCw, Wifi, WifiOff, Key, Eye, EyeOff,
-  ListFilter, Search, Check, Trash, Columns, Layout, Info
+  ListFilter, Search, Check, Trash, Columns, Layout, Info, Upload, FileSpreadsheet, AlertCircle
 } from 'lucide-react';
+
+interface AlarmMappingItem {
+  id: string;
+  address: string;
+  alarmBit: number;
+  code: string;
+  content: string;
+  solution: string;
+  level1Alarm: string;
+  level2Alarm: string;
+}
+
+interface ProcessMappingItem {
+  id: string;
+  parameterName: string;
+  parameterCode: string;
+  address: string;
+  unit: string;
+  dataType: string;
+}
 
 interface DeviceSettingsProps {
   device: Equipment | null;
@@ -15,7 +35,7 @@ interface DeviceSettingsProps {
   onBack: () => void;
 }
 
-type TabType = 'BASIC' | 'MAPPING' | 'PROCESS_MAPPING' | 'PROCESS_LAYOUT';
+type TabType = 'BASIC' | 'MAPPING' | 'PROCESS_MAPPING' | 'PROCESS_LAYOUT' | 'AGV_ORDER';
 type ConnectionResult = 'IDLE' | 'TESTING' | 'SUCCESS' | 'FAILED';
 
 interface TableColumn {
@@ -29,6 +49,49 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
   const [activeTab, setActiveTab] = useState<TabType>('BASIC');
   const [connectionResult, setConnectionResult] = useState<ConnectionResult>('IDLE');
   const [isTesting, setIsTesting] = useState(false);
+  // Alarm Mapping States
+  const [alarmMappings, setAlarmMappings] = useState<AlarmMappingItem[]>([
+    { id: '1', address: 'D100.0', alarmBit: 0, code: 'E001', content: '緊急停止觸發', solution: '檢查急停按鈕並重置', level1Alarm: '系統報警', level2Alarm: '安全報警' },
+    { id: '2', address: 'D100.1', alarmBit: 1, code: 'E002', content: '安全門未鎖定', solution: '確保持續關閉並鎖定安全門', level1Alarm: '系統報警', level2Alarm: '安全報警' },
+    { id: '3', address: 'D100.2', alarmBit: 2, code: 'W001', content: '氣壓不足警告', solution: '檢查主氣源壓力', level1Alarm: '設備報警', level2Alarm: '氣壓報警' },
+    { id: '4', address: 'D100.3', alarmBit: 3, code: 'I001', content: '物料低位提示', solution: '及時補充物料', level1Alarm: '物料報警', level2Alarm: '低位報警' },
+  ]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const processFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Process Mapping States
+    // Storage List States
+  const [storageLocations, setStorageLocations] = useState<StorageLocation[]>([]);
+
+  const handleAddStorage = () => {
+    const newLoc: StorageLocation = {
+      id: `ST-${Date.now()}`,
+      productInfo: '新產品',
+      requestType: StorageRequestType.Loading,
+      equipmentId: device?.id || '',
+      lineId: device?.lineId || '',
+      priority: StoragePriority.Normal,
+      quantity: 0
+    };
+    setStorageLocations([...storageLocations, newLoc]);
+  };
+
+  const handleUpdateStorage = (index: number, field: keyof StorageLocation, value: any) => {
+    const updated = [...storageLocations];
+    updated[index] = { ...updated[index], [field]: value };
+    setStorageLocations(updated);
+  };
+
+  const handleRemoveStorage = (index: number) => {
+    const updated = storageLocations.filter((_, i) => i !== index);
+    setStorageLocations(updated);
+  };
+
+const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
+    { id: '1', parameterName: '主軸轉速', parameterCode: 'SPINDLE_SPEED', address: 'D200', unit: 'RPM', dataType: 'Float' },
+    { id: '2', parameterName: '進給速度', parameterCode: 'FEED_RATE', address: 'D204', unit: 'mm/min', dataType: 'Float' },
+    { id: '3', parameterName: '加工壓力', parameterCode: 'PROC_PRESS', address: 'D208', unit: 'MPa', dataType: 'Float' },
+  ]);
   
   // Database Connection States
   const [dbConfig, setDbConfig] = useState({
@@ -76,12 +139,16 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
     plcStringReverse: false,
     rack: '0',
     slot: '2',
-    alarmAddress: '',
-    alarmAddressLength: 0,
+    alarmAddress: 'D6000',
+    alarmAddressLength: 20,
     processAddress: '',
     processAddressLength: 0,
-    processParamAddress: '',
-    processParamLength: 0
+    processParamAddress: 'D6100',
+    processParamLength: 10,
+    bitLength: '16Bits',
+    agvOrderRequestUrl: '',
+    agvOrderEndUrl: '',
+    agvOrderPriorityUrl: ''
   });
 
   useEffect(() => {
@@ -106,17 +173,93 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
         plcStringReverse: device.plcStringReverse || false,
         rack: '0',
         slot: '2',
-        alarmAddress: device.alarmAddress || '',
-        alarmAddressLength: device.alarmAddressLength || 0,
+        alarmAddress: device.alarmAddress || 'D6000',
+        alarmAddressLength: device.alarmAddressLength || 20,
         processAddress: device.processAddress || '',
         processAddressLength: device.processAddressLength || 0,
-        processParamAddress: device.processParamAddress || '',
-        processParamLength: device.processParamLength || 0
+        processParamAddress: device.processParamAddress || 'D6100',
+        processParamLength: device.processParamLength || 10,
+        bitLength: device.bitLength || '16Bits',
+        agvOrderRequestUrl: device.agvOrderRequestUrl || '',
+        agvOrderEndUrl: device.agvOrderEndUrl || '',
+        agvOrderPriorityUrl: device.agvOrderPriorityUrl || ''
       });
+      setStorageLocations(device.storageLocations || []);
     }
   }, [device]);
 
-  const handleTestConnection = async () => {
+  
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleProcessImportClick = () => {
+    processFileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const fileContent = event.target?.result as string;
+          const rows = fileContent.split('\n').filter(row => row.trim() !== '');
+          const newMappings: AlarmMappingItem[] = rows.slice(1).map((row, index) => {
+            const parts = row.split(',').map(s => s.trim());
+            return {
+              id: (Date.now() + index).toString(),
+              address: parts[0] || 'N/A',
+              alarmBit: parseInt(parts[1]) || 0,
+              code: parts[2] || 'N/A',
+              content: parts[3] || 'N/A',
+              solution: parts[4] || 'N/A',
+              level1Alarm: parts[5] || 'N/A',
+              level2Alarm: parts[6] || 'N/A',
+            };
+          });
+          setAlarmMappings(prev => [...prev, ...newMappings]);
+          alert('導入成功');
+        } catch (err) {
+          console.error(err);
+          alert('導入失敗，請檢查文件格式');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleProcessFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const fileContent = event.target?.result as string;
+          const rows = fileContent.split('\n').filter(row => row.trim() !== '');
+          const newMappings: ProcessMappingItem[] = rows.slice(1).map((row, index) => {
+            const parts = row.split(',').map(s => s.trim());
+            return {
+              id: (Date.now() + index).toString(),
+              parameterName: parts[0] || 'N/A',
+              parameterCode: parts[1] || 'N/A',
+              address: parts[2] || 'N/A',
+              unit: parts[3] || '',
+              dataType: parts[4] || 'Float'
+            };
+          });
+          setProcessMappings(prev => [...prev, ...newMappings]);
+          alert('工藝參數導入成功');
+        } catch (err) {
+          console.error(err);
+          alert('導入失敗，請檢查文件格式');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+const handleTestConnection = async () => {
     if (!device) return;
     setIsTesting(true);
     setConnectionResult('TESTING');
@@ -172,16 +315,20 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
           dataType: formData.plcDataType,
           readMethod: formData.plcReadMethod,
           isReverse: formData.plcStringReverse,
+          bitLength: formData.bitLength,
           alarmAddress: formData.alarmAddress,
           alarmAddressLength: formData.alarmAddressLength,
           processAddress: formData.processAddress,
           processAddressLength: formData.processAddressLength,
           processParamAddress: formData.processParamAddress,
-          processParamLength: formData.processParamLength
+          processParamLength: formData.processParamLength,
+          agvOrderRequestUrl: formData.agvOrderRequestUrl,
+          agvOrderEndUrl: formData.agvOrderEndUrl,
+          agvOrderPriorityUrl: formData.agvOrderPriorityUrl
         });
 
         if (response.data.code === 200) {
-          onSave({ ...device, ...formData });
+          onSave({ ...device, ...formData, storageLocations });
           alert(response.data.message || '設備配置與通訊參數已成功保存！');
         } else {
           alert(`保存失敗: ${response.data.message || '未知錯誤'}`);
@@ -308,17 +455,404 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
     setEditingRows(editingRows.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
+  const handleRefreshAlarmMappings = () => {
+    alert('已從服務器刷新報警映射數據');
+  };
+
+  const handleSaveAlarmMappings = () => {
+    alert('報警映射數據已成功保存到後端服務器');
+  };
+
   const renderMappingInfo = () => (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 flex flex-col items-center justify-center min-h-[400px]">
-      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-        <Database size={32} className="text-slate-400" />
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full min-h-[500px]">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mr-3">
+            <Database size={20} className="text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">報警映射管理</h3>
+            <p className="text-sm text-slate-500">導入及維護設備內部的報警點位映射關係</p>
+          </div>
+        </div>
+        
+        <div className="flex space-x-3">
+                    <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            accept=".csv,.txt"
+          />
+          <button 
+            onClick={handleRefreshAlarmMappings}
+            className="flex items-center px-4 py-2 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-lg text-sm font-medium transition-all"
+          >
+            <RotateCw size={16} className="mr-2" />
+            刷新
+          </button>
+          <button 
+            onClick={handleImportClick}
+            className="flex items-center px-4 py-2 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-lg text-sm font-medium transition-all"
+          >
+            <Upload size={16} className="mr-2" />
+            導入映射表
+          </button>
+          <button 
+            onClick={handleSaveAlarmMappings}
+            className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm"
+          >
+            <Save size={16} className="mr-2" />
+            保存
+          </button>
+          <button className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm">
+            <Plus size={16} className="mr-2" />
+            新增報警點
+          </button>
+        </div>
       </div>
-      <h3 className="text-lg font-bold text-slate-700 mb-2">數據映射管理已清理</h3>
-      <p className="text-sm text-slate-500 text-center max-w-md">
-        現有的數據庫展示內容已清除，為後續的更新做準備。
-      </p>
+
+      <div className="flex-1 overflow-hidden border border-slate-100 rounded-xl">
+        <div className="overflow-x-auto h-full">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警地址</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警位</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警代碼</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警內容</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">一級報警</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">二級報警</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警解決方法</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {alarmMappings.length > 0 ? (
+                alarmMappings.map((mapping) => (
+                  <tr key={mapping.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-mono text-slate-600">{mapping.address}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.alarmBit}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-700">{mapping.code}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.content}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.level1Alarm}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.level2Alarm}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.solution}</td>
+                    <td className="px-6 py-4 text-sm text-right">
+                      <button className="text-slate-400 hover:text-blue-600 mr-3">
+                        <Edit3 size={16} />
+                      </button>
+                      <button className="text-slate-400 hover:text-red-600">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <FileSpreadsheet size={48} className="text-slate-200 mb-4" />
+                      <p className="text-slate-400">目前尚無報警映射數據</p>
+                      <button 
+                        onClick={handleImportClick}
+                        className="mt-4 text-blue-600 hover:underline text-sm font-medium"
+                      >
+                        立即導入數據
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div className="mt-4 flex items-center justify-between text-xs text-slate-400 px-2">
+        <p>共計 {alarmMappings.length} 條映射規則</p>
+        <p>支持 CSV 格式導入 (格式: 地址, 報警位, 代碼, 內容, 解決方法, 一級報警, 二級報警)</p>
+      </div>
     </div>
   );
+
+  const getProcessMappingLength = () => {
+    const baseLength = formData.processParamLength || 0;
+    if (formData.plcReadMethod === '按位讀取') {
+      const bitsMatch = formData.bitLength?.match(/(\d+)/);
+      const bits = bitsMatch ? parseInt(bitsMatch[1], 10) : 16;
+      return baseLength * bits;
+    }
+    return baseLength;
+  };
+
+  const renderProcessMappingInfo = () => {
+    const totalLength = getProcessMappingLength();
+    
+    return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full min-h-[500px]">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center mr-3">
+            <Zap size={20} className="text-indigo-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">工藝映射管理</h3>
+            <p className="text-sm text-slate-500">定義設備工藝參數與 PLC 地址的關聯</p>
+          </div>
+        </div>
+        
+        <div className="flex space-x-3">
+          <button className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm">
+            <Plus size={16} className="mr-2" />
+            新增參數點
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-hidden border border-slate-100 rounded-xl">
+        <div className="overflow-x-auto h-full">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數名稱</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">標識代碼</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">點位地址</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">單位</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">數據類型</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {Array.from({ length: totalLength }).map((_, index) => {
+                const mapping = processMappings[index];
+                return (
+                  <tr key={mapping?.id || index} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-slate-700">{mapping?.parameterName || '-'}</td>
+                    <td className="px-6 py-4 text-sm font-mono text-indigo-600">{mapping?.parameterCode || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600 font-mono">{mapping?.address || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{mapping?.unit || '-'}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs">
+                        {mapping?.dataType || '-'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right">
+                      <button className="text-slate-400 hover:text-indigo-600 mr-3">
+                        <Edit3 size={16} />
+                      </button>
+                      <button className="text-slate-400 hover:text-red-600">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {totalLength === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <Settings size={48} className="text-slate-200 mb-4" />
+                      <p className="text-slate-400">目前尚無工藝映射數據 (長度設為為 0)</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div className="mt-4 flex items-center justify-between text-xs text-slate-400 px-2">
+        <p>共計 {totalLength} 條工藝參數關聯</p>
+        <p>此列表長度受配置參數中的「工藝參數長度」與「讀取方式」限制</p>
+      </div>
+    </div>
+  );
+  };
+
+  const renderAGVOrderInfo = () => (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full min-h-[500px] space-y-8">
+      {/* AGV URL Configuration */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center mr-3">
+              <Zap size={20} className="text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">AGV 訂單管理</h3>
+              <p className="text-sm text-slate-500">配置與維護 AGV 調度相關的接口地址</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 flex items-center text-xs">
+              <Globe size={14} className="mr-2 text-amber-500" /> 訂單請求 URL
+            </label>
+            <input 
+              type="text" 
+              value={formData.agvOrderRequestUrl} 
+              onChange={(e) => setFormData({...formData, agvOrderRequestUrl: e.target.value})} 
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all font-mono text-sm" 
+              placeholder="例如: http://api.agv.com/order/request"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 flex items-center text-xs">
+              <Check size={14} className="mr-2 text-emerald-500" /> 訂單結束 URL
+            </label>
+            <input 
+              type="text" 
+              value={formData.agvOrderEndUrl} 
+              onChange={(e) => setFormData({...formData, agvOrderEndUrl: e.target.value})} 
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono text-sm" 
+              placeholder="例如: http://api.agv.com/order/end"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 flex items-center text-xs">
+              <Activity size={14} className="mr-2 text-indigo-500" /> 修訂優先級 URL
+            </label>
+            <input 
+              type="text" 
+              value={formData.agvOrderPriorityUrl} 
+              onChange={(e) => setFormData({...formData, agvOrderPriorityUrl: e.target.value})} 
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-mono text-sm" 
+              placeholder="例如: http://api.agv.com/order/priority"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Storage List Section */}
+      <div className="flex-1 flex flex-col min-h-[300px]">
+        <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mr-3">
+              <Package size={20} className="text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">料倉列表</h3>
+              <p className="text-sm text-slate-500">維護該設備關聯的料倉信息</p>
+            </div>
+          </div>
+          <button 
+            type="button"
+            onClick={handleAddStorage}
+            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm active:scale-95"
+          >
+            <Plus size={16} className="mr-2" />
+            增加料倉
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-hidden border border-slate-100 rounded-xl">
+          <div className="overflow-x-auto h-full">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">產品信息</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">請求類型</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">設備編號</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">綫體編號</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">優先級</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">數量</th>
+                  <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {storageLocations.length > 0 ? (
+                  storageLocations.map((loc, idx) => (
+                    <tr key={loc.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-3 text-sm font-medium text-slate-700">
+                        <input 
+                          type="text" 
+                          value={loc.productInfo} 
+                          onChange={(e) => handleUpdateStorage(idx, 'productInfo', e.target.value)}
+                          className="w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-500 outline-none py-1"
+                        />
+                      </td>
+                      <td className="px-6 py-3 text-sm">
+                        <select 
+                          value={loc.requestType} 
+                          onChange={(e) => handleUpdateStorage(idx, 'requestType', e.target.value)}
+                          className="bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-500 outline-none py-1 text-blue-600 font-medium"
+                        >
+                          <option value={StorageRequestType.Loading}>上料</option>
+                          <option value={StorageRequestType.Unloading}>下料</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-3 text-sm text-slate-500">
+                        <input 
+                          type="text" 
+                          value={loc.equipmentId} 
+                          onChange={(e) => handleUpdateStorage(idx, 'equipmentId', e.target.value)}
+                          className="w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-500 outline-none py-1 font-mono"
+                        />
+                      </td>
+                      <td className="px-6 py-3 text-sm text-slate-500">
+                        <input 
+                          type="text" 
+                          value={loc.lineId} 
+                          onChange={(e) => handleUpdateStorage(idx, 'lineId', e.target.value)}
+                          className="w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-500 outline-none py-1 font-mono"
+                        />
+                      </td>
+                      <td className="px-6 py-3 text-sm">
+                        <select 
+                          value={loc.priority} 
+                          onChange={(e) => handleUpdateStorage(idx, 'priority', e.target.value)}
+                          className={`bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-500 outline-none py-1 font-medium ${
+                            loc.priority === StoragePriority.VeryUrgent ? 'text-red-600' : 
+                            loc.priority === StoragePriority.Urgent ? 'text-amber-600' : 'text-slate-600'
+                          }`}
+                        >
+                          <option value={StoragePriority.Normal}>正常</option>
+                          <option value={StoragePriority.Urgent}>緊急</option>
+                          <option value={StoragePriority.VeryUrgent}>非常緊急</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-3 text-sm">
+                        <input 
+                          type="number" 
+                          value={loc.quantity} 
+                          onChange={(e) => handleUpdateStorage(idx, 'quantity', parseInt(e.target.value) || 0)}
+                          className="w-20 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-500 outline-none py-1 text-slate-700 font-mono"
+                        />
+                      </td>
+                      <td className="px-6 py-3 text-sm text-right">
+                        <button 
+                          onClick={() => handleRemoveStorage(idx)}
+                          className="text-slate-400 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                      <div className="flex flex-col items-center">
+                        <Package size={40} className="text-slate-200 mb-2" />
+                        <p>暫無料倉數據，請點擊上方按鈕新增</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
 
 
   if (!device) return <div className="p-8 text-center text-red-500">Device not found</div>;
@@ -518,6 +1052,16 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
                         onChange={(e) => setFormData({...formData, processParamLength: parseInt(e.target.value) || 0})} 
                         className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
                       />
+                    </div>                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-slate-700">位長度</label>
+                      <select 
+                        value={formData.bitLength} 
+                        onChange={(e) => setFormData({...formData, bitLength: e.target.value})} 
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all"
+                      >
+                        <option value="16Bits">16Bits</option>
+                        <option value="32Bits">32Bits</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -539,13 +1083,6 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
                   {isTesting ? <RotateCw size={18} className="animate-spin mr-2" /> : <Zap size={18} className="mr-2" />}
                   {isTesting ? '處理中...' : '測試設備連線'}
                 </button>
-            <button 
-              onClick={() => (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && setActiveTab('PROCESS_MAPPING')} 
-              disabled={device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'PROCESS_MAPPING' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} ${device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment ? 'opacity-30 cursor-not-allowed' : ''}`}
-            >
-              工藝映射管理
-            </button>
               </div>
             </div>
           </div>
@@ -580,7 +1117,7 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
               disabled={device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment}
               className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'MAPPING' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} ${device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment ? 'opacity-30 cursor-not-allowed' : ''}`}
             >
-              數據映射管理
+              報警映射管理
             </button>
             <button 
               onClick={() => (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && setActiveTab('PROCESS_MAPPING')} 
@@ -595,23 +1132,20 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
               className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'PROCESS_LAYOUT' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} ${device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment ? 'opacity-30 cursor-not-allowed' : ''}`}
             >
               工藝排佈
+            </button>
+            <button 
+              onClick={() => (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && setActiveTab('AGV_ORDER')} 
+              disabled={device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'AGV_ORDER' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'} ${device.type !== EquipmentType.AssemblyEquipment && device.type !== EquipmentType.TestingEquipment && device.type !== EquipmentType.WaterVaporEquipment ? 'opacity-30 cursor-not-allowed' : ''}`}
+            >
+              AGV 訂單管理
             </button></div>
       </div>
 
       <div>
         {activeTab === 'BASIC' && renderBasicInfo()}
         {activeTab === 'MAPPING' && renderMappingInfo()}
-        {activeTab === 'PROCESS_MAPPING' && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 flex flex-col items-center justify-center min-h-[400px]">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-              <Database size={32} className="text-slate-400" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-700 mb-2">工藝映射管理模塊</h3>
-            <p className="text-sm text-slate-500 text-center max-w-md">
-              此功能暫時為空，為後續功能更新預留。
-            </p>
-          </div>
-        )}
+        {activeTab === 'PROCESS_MAPPING' && renderProcessMappingInfo()}
         {activeTab === 'PROCESS_LAYOUT' && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
             <div className="flex items-center mb-6">
@@ -646,6 +1180,7 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
             </div>
           </div>
         )}
+        {activeTab === 'AGV_ORDER' && renderAGVOrderInfo()}
       </div>
     </div>
   );
