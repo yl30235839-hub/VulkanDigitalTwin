@@ -99,6 +99,7 @@ export interface Equipment {
   agvOrderRequestUrl?: string;
   agvOrderEndUrl?: string;
   agvOrderPriorityUrl?: string;
+  agvOrderClearUrl?: string;
   storageLocations?: StorageLocation[];
 }
 

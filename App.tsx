@@ -265,6 +265,7 @@ const App: React.FC = () => {
         return (
           <DeviceSettings 
             device={device} 
+            allEquipment={allEquipment}
             onSave={handleUpdateEquipment}
             onBack={handleBackToEquipment} 
           />

@@ -22,15 +22,15 @@ interface AlarmMappingItem {
 
 interface ProcessMappingItem {
   id: string;
-  parameterName: string;
-  parameterCode: string;
   address: string;
-  unit: string;
+  parameterBit: string;
+  parameterType: string;
   dataType: string;
 }
 
 interface DeviceSettingsProps {
   device: Equipment | null;
+  allEquipment?: Equipment[];
   onSave: (updated: Equipment) => void;
   onBack: () => void;
 }
@@ -44,7 +44,7 @@ interface TableColumn {
   type: string;
 }
 
-const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack }) => {
+const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, allEquipment = [], onSave, onBack }) => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('BASIC');
   const [connectionResult, setConnectionResult] = useState<ConnectionResult>('IDLE');
@@ -88,9 +88,9 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, onSave, onBack 
   };
 
 const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
-    { id: '1', parameterName: '主軸轉速', parameterCode: 'SPINDLE_SPEED', address: 'D200', unit: 'RPM', dataType: 'Float' },
-    { id: '2', parameterName: '進給速度', parameterCode: 'FEED_RATE', address: 'D204', unit: 'mm/min', dataType: 'Float' },
-    { id: '3', parameterName: '加工壓力', parameterCode: 'PROC_PRESS', address: 'D208', unit: 'MPa', dataType: 'Float' },
+    { id: '1', address: 'D200', parameterBit: '0', parameterType: '主軸轉速控制', dataType: 'Float' },
+    { id: '2', address: 'D204', parameterBit: '1', parameterType: '進給速度控制', dataType: 'Float' },
+    { id: '3', address: 'D208', parameterBit: '2', parameterType: '加工壓力控制', dataType: 'Float' },
   ]);
   
   // Database Connection States
@@ -117,6 +117,64 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     { id: '1', name: 'id', type: 'INT' },
     { id: '2', name: 'timestamp', type: 'DATETIME' }
   ]);
+
+  // Process Mapping Modal State
+  const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+  const SYSTEM_PROCESS_PARAMETERS = [
+    '工藝結果',
+    '工藝排產',
+    'AGV訂單申請',
+    'AGV訂單關閉'
+  ];
+  const [selectedProcessType, setSelectedProcessType] = useState(SYSTEM_PROCESS_PARAMETERS[0]);
+
+  const handleAddProcessMapping = () => {
+    const newProcessId = (Date.now() + processMappings.length).toString();
+    const newMapping: ProcessMappingItem = {
+      id: newProcessId,
+      address: 'DXXX',
+      parameterBit: '0',
+      parameterType: selectedProcessType,
+      dataType: 'Float'
+    };
+    /* We add it to the front or back of the list, assuming we just expand the array. 
+       Usually this list displays the mapped values and empty values, in this component 
+       it's rendering based on total Length or mapped items. 
+       We will append it to processMappings. */
+    setProcessMappings([...processMappings, newMapping]);
+    setIsProcessModalOpen(false);
+    setSelectedProcessType(SYSTEM_PROCESS_PARAMETERS[0]);
+  };
+
+  // Schedule Layout State
+
+  const [selectedScheduleItem, setSelectedScheduleItem] = useState<string | null>(null);
+
+  interface ScheduleFactor {
+    equipmentId: string;
+    equipmentName: string;
+    results: { id: string; name: string; value: boolean }[];
+  }
+  const [scheduleFactors, setScheduleFactors] = useState<ScheduleFactor[]>([]);
+
+  useEffect(() => {
+    if (device && allEquipment && allEquipment.length > 0) {
+      const lineEquip = allEquipment.filter(e => e.lineId === device.lineId);
+      const currentIndex = lineEquip.findIndex(e => e.id === device.id);
+      if (currentIndex > 0) {
+        const preceding = lineEquip.slice(0, currentIndex);
+        setScheduleFactors(
+          preceding.map((eq, i) => ({
+            equipmentId: eq.id,
+            equipmentName: eq.name,
+            results: [{ id: 'res-' + i, name: '工藝結果', value: true }]
+          }))
+        );
+      } else {
+        setScheduleFactors([]);
+      }
+    }
+  }, [device, allEquipment]);
 
   // Local Form State
   const [formData, setFormData] = useState({
@@ -148,7 +206,8 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     bitLength: '16Bits',
     agvOrderRequestUrl: '',
     agvOrderEndUrl: '',
-    agvOrderPriorityUrl: ''
+    agvOrderPriorityUrl: '',
+    agvOrderClearUrl: ''
   });
 
   useEffect(() => {
@@ -182,7 +241,8 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
         bitLength: device.bitLength || '16Bits',
         agvOrderRequestUrl: device.agvOrderRequestUrl || '',
         agvOrderEndUrl: device.agvOrderEndUrl || '',
-        agvOrderPriorityUrl: device.agvOrderPriorityUrl || ''
+        agvOrderPriorityUrl: device.agvOrderPriorityUrl || '',
+        agvOrderClearUrl: device.agvOrderClearUrl || ''
       });
       setStorageLocations(device.storageLocations || []);
     }
@@ -241,11 +301,10 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
             const parts = row.split(',').map(s => s.trim());
             return {
               id: (Date.now() + index).toString(),
-              parameterName: parts[0] || 'N/A',
-              parameterCode: parts[1] || 'N/A',
-              address: parts[2] || 'N/A',
-              unit: parts[3] || '',
-              dataType: parts[4] || 'Float'
+              address: parts[0] || 'N/A',
+              parameterBit: parts[1] || '',
+              parameterType: parts[2] || 'N/A',
+              dataType: parts[3] || 'Float'
             };
           });
           setProcessMappings(prev => [...prev, ...newMappings]);
@@ -324,7 +383,8 @@ const handleTestConnection = async () => {
           processParamLength: formData.processParamLength,
           agvOrderRequestUrl: formData.agvOrderRequestUrl,
           agvOrderEndUrl: formData.agvOrderEndUrl,
-          agvOrderPriorityUrl: formData.agvOrderPriorityUrl
+          agvOrderPriorityUrl: formData.agvOrderPriorityUrl,
+          agvOrderClearUrl: formData.agvOrderClearUrl
         });
 
         if (response.data.code === 200) {
@@ -603,7 +663,7 @@ const handleTestConnection = async () => {
         </div>
         
         <div className="flex space-x-3">
-          <button className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm">
+          <button onClick={() => setIsProcessModalOpen(true)} className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm">
             <Plus size={16} className="mr-2" />
             新增參數點
           </button>
@@ -615,10 +675,9 @@ const handleTestConnection = async () => {
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數名稱</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">標識代碼</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">點位地址</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">單位</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數地址</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數位</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數類型</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">數據類型</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
               </tr>
@@ -628,10 +687,9 @@ const handleTestConnection = async () => {
                 const mapping = processMappings[index];
                 return (
                   <tr key={mapping?.id || index} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-slate-700">{mapping?.parameterName || '-'}</td>
-                    <td className="px-6 py-4 text-sm font-mono text-indigo-600">{mapping?.parameterCode || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600 font-mono">{mapping?.address || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{mapping?.unit || '-'}</td>
+                    <td className="px-6 py-4 text-sm font-mono text-slate-600">{mapping?.address || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{mapping?.parameterBit || '-'}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-indigo-600">{mapping?.parameterType || '-'}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs">
                         {mapping?.dataType || '-'}
@@ -650,7 +708,7 @@ const handleTestConnection = async () => {
               })}
               {totalLength === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
+                  <td colSpan={5} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <Settings size={48} className="text-slate-200 mb-4" />
                       <p className="text-slate-400">目前尚無工藝映射數據 (長度設為為 0)</p>
@@ -687,7 +745,7 @@ const handleTestConnection = async () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700 flex items-center text-xs">
               <Globe size={14} className="mr-2 text-amber-500" /> 訂單請求 URL
@@ -711,6 +769,19 @@ const handleTestConnection = async () => {
               onChange={(e) => setFormData({...formData, agvOrderEndUrl: e.target.value})} 
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono text-sm" 
               placeholder="例如: http://api.agv.com/order/end"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 flex items-center text-xs">
+              <Trash size={14} className="mr-2 text-red-500" /> 訂單清料 URL
+            </label>
+            <input 
+              type="text" 
+              value={formData.agvOrderClearUrl} 
+              onChange={(e) => setFormData({...formData, agvOrderClearUrl: e.target.value})} 
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all font-mono text-sm" 
+              placeholder="例如: http://api.agv.com/order/clear"
             />
           </div>
 
@@ -1147,41 +1218,167 @@ const handleTestConnection = async () => {
         {activeTab === 'MAPPING' && renderMappingInfo()}
         {activeTab === 'PROCESS_MAPPING' && renderProcessMappingInfo()}
         {activeTab === 'PROCESS_LAYOUT' && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 min-h-[500px]">
             <div className="flex items-center mb-6">
               <Layout size={24} className="text-indigo-600 mr-3" />
               <h3 className="text-lg font-medium text-slate-800">工藝排佈配置</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-slate-700">工藝地址</label>
-                <input 
-                  type="text" 
-                  value={formData.processAddress} 
-                  onChange={(e) => setFormData({...formData, processAddress: e.target.value})} 
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                  placeholder="例如: D1200"
-                />
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-slate-700">排產項目</h4>
+                {processMappings.filter(m => m.parameterType === '工藝排產').length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {processMappings.filter(m => m.parameterType === '工藝排產').map((mapping, idx) => (
+                        <button 
+                          key={mapping.id} 
+                          onClick={() => setSelectedScheduleItem(mapping.id)}
+                          className={`text-left border rounded-lg p-4 transition-colors shadow-sm flex flex-col justify-between h-full ${
+                            selectedScheduleItem === mapping.id
+                              ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-500/20'
+                              : 'border-slate-200 bg-white hover:border-indigo-300'
+                          }`}
+                        >
+                          <div className="flex items-start">
+                            <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs mr-3 shrink-0 ${
+                               selectedScheduleItem === mapping.id
+                                 ? 'bg-indigo-600 text-white border-indigo-700'
+                                 : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                            }`}>
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <p className={`text-sm font-medium ${selectedScheduleItem === mapping.id ? 'text-indigo-900' : 'text-slate-800'}`}>排產任務節點</p>
+                              <p className={`text-xs font-mono mt-1 break-all ${selectedScheduleItem === mapping.id ? 'text-indigo-700' : 'text-slate-500'}`}>地址: {mapping.address} | 位: {mapping.parameterBit}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                    <Layout size={32} className="mx-auto text-slate-300 mb-3" />
+                    <p className="text-sm font-medium text-slate-600">目前沒有排產項目</p>
+                    <p className="text-xs text-slate-500 mt-1">請先在「工藝映射管理」分頁中新增類型為「工藝排產」的參數點。</p>
+                  </div>
+                )}
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-slate-700">工藝地址長度</label>
-                <input 
-                  type="number" 
-                  value={formData.processAddressLength} 
-                  onChange={(e) => setFormData({...formData, processAddressLength: parseInt(e.target.value) || 0})} 
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                />
+              
+              <div className="border-t border-slate-100 pt-8 space-y-4">
+                <h4 className="text-sm font-semibold text-slate-700">排產因子</h4>
+                {selectedScheduleItem ? (
+                  scheduleFactors.length > 0 ? (
+                    <div className="space-y-4">
+                      {scheduleFactors.map(factor => (
+                        <div key={factor.equipmentId} className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                          <h5 className="font-semibold text-slate-700 mb-4">{factor.equipmentName}</h5>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {factor.results.map(res => (
+                              <label key={res.id} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-indigo-300 transition-colors">
+                                <input 
+                                  type="checkbox" 
+                                  checked={res.value} 
+                                  onChange={() => {
+                                     const updated = [...scheduleFactors];
+                                     const fIdx = updated.findIndex(f => f.equipmentId === factor.equipmentId);
+                                     if(fIdx > -1) {
+                                       const rIdx = updated[fIdx].results.findIndex(r => r.id === res.id);
+                                       if(rIdx > -1) {
+                                         updated[fIdx].results[rIdx].value = !updated[fIdx].results[rIdx].value;
+                                         setScheduleFactors(updated);
+                                       }
+                                     }
+                                  }}
+                                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                />
+                                <span className="text-sm text-slate-700 font-medium">{res.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                      <Layout size={32} className="mx-auto text-slate-300 mb-3 opacity-50" />
+                      <p className="text-sm font-medium text-slate-600">無前置設備</p>
+                      <p className="text-xs text-slate-500 mt-1">此設備為產線第一台，無排產因子來源。</p>
+                    </div>
+                  )
+                ) : (
+                  <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                    <Layout size={32} className="mx-auto text-slate-300 mb-3 opacity-50" />
+                    <p className="text-sm font-medium text-slate-600">請選取排產項目</p>
+                    <p className="text-xs text-slate-500 mt-1">點擊上方的排產任務節點以查看關聯因子</p>
+                  </div>
+                )}
               </div>
-            </div>
-            
-            <div className="text-center text-slate-500 py-8 border-t border-slate-100">
-              <p className="max-w-md mx-auto">此分頁用於對該設備的工藝進行自定義排佈，其他內容暫時為空。</p>
             </div>
           </div>
         )}
         {activeTab === 'AGV_ORDER' && renderAGVOrderInfo()}
       </div>
+
+      {/* Add Process Mapping Modal */}
+      {isProcessModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800">新增參數點</h3>
+              <button 
+                onClick={() => setIsProcessModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">參數類型</label>
+                <div className="border border-slate-200 rounded-lg overflow-hidden max-h-60 overflow-y-auto bg-slate-50 custom-scrollbar">
+                  <div className="grid grid-cols-1 divide-y divide-slate-100">
+                    {SYSTEM_PROCESS_PARAMETERS.map(param => (
+                      <button
+                        key={param}
+                        onClick={() => setSelectedProcessType(param)}
+                        className={`w-full text-left px-4 py-3 text-sm flex items-center transition-colors ${
+                          selectedProcessType === param 
+                            ? 'bg-indigo-50 text-indigo-700 font-medium' 
+                            : 'bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border mr-3 flex items-center justify-center shrink-0 ${
+                          selectedProcessType === param ? 'border-indigo-600' : 'border-slate-300'
+                        }`}>
+                          {selectedProcessType === param && <div className="w-2 h-2 rounded-full bg-indigo-600" />}
+                        </div>
+                        {param}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">請選擇需要加入的工藝參數類型。</p>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+              <button 
+                onClick={() => setIsProcessModalOpen(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-lg text-sm font-medium transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleAddProcessMapping}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+              >
+                確定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
