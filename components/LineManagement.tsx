@@ -500,6 +500,9 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
                 >
                   <option value={LineType.NVIDIA}>VKLine_NVIDIA</option>
                   <option value={LineType.APPLE}>VKLine_APPLE</option>
+                  <option value={LineType.ORACLE}>VKLine_Oracle</option>
+                  <option value={LineType.MICROSOFT}>VKLine_Microsoft</option>
+                  <option value={LineType.META}>VKLine_Meta</option>
                 </select>
               </div>
               <div>

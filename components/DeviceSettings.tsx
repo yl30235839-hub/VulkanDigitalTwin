@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Equipment, MachineStatus, EquipmentType, StorageLocation, StorageRequestType, StoragePriority } from '../types';
 import api from '../services/api';
+import { backendDomain } from '../constants';
 import { 
   ArrowLeft, Save, Activity, Settings, 
   Cpu, Zap, Database, Plug, Plus, Trash2, Server, Truck, Package,
@@ -49,6 +50,8 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, allEquipment = 
   const [activeTab, setActiveTab] = useState<TabType>('BASIC');
   const [connectionResult, setConnectionResult] = useState<ConnectionResult>('IDLE');
   const [isTesting, setIsTesting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   // Alarm Mapping States
   const [alarmMappings, setAlarmMappings] = useState<AlarmMappingItem[]>([
     { id: '1', address: 'D100.0', alarmBit: 0, code: 'E001', content: '緊急停止觸發', solution: '檢查急停按鈕並重置', level1Alarm: '系統報警', level2Alarm: '安全報警' },
@@ -56,6 +59,13 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, allEquipment = 
     { id: '3', address: 'D100.2', alarmBit: 2, code: 'W001', content: '氣壓不足警告', solution: '檢查主氣源壓力', level1Alarm: '設備報警', level2Alarm: '氣壓報警' },
     { id: '4', address: 'D100.3', alarmBit: 3, code: 'I001', content: '物料低位提示', solution: '及時補充物料', level1Alarm: '物料報警', level2Alarm: '低位報警' },
   ]);
+
+  // Alarm pagination
+  const [alarmCurrentPage, setAlarmCurrentPage] = useState(1);
+  const alarmPageSize = 100;
+  const alarmTotalPages = Math.ceil(alarmMappings.length / alarmPageSize);
+  const paginatedAlarms = alarmMappings.slice((alarmCurrentPage - 1) * alarmPageSize, alarmCurrentPage * alarmPageSize);
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const processFileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -204,6 +214,10 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     processParamAddress: 'D6100',
     processParamLength: 10,
     bitLength: '16Bits',
+    alarmReadMethod: '按字讀取',
+    alarmBitLength: '16Bits',
+    processReadMethod: '按字讀取',
+    processBitLength: '16Bits',
     agvOrderRequestUrl: '',
     agvOrderEndUrl: '',
     agvOrderPriorityUrl: '',
@@ -239,6 +253,10 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
         processParamAddress: device.processParamAddress || 'D6100',
         processParamLength: device.processParamLength || 10,
         bitLength: device.bitLength || '16Bits',
+        alarmReadMethod: device.alarmReadMethod || '按字讀取',
+        alarmBitLength: device.alarmBitLength || '16Bits',
+        processReadMethod: device.processReadMethod || '按字讀取',
+        processBitLength: device.processBitLength || '16Bits',
         agvOrderRequestUrl: device.agvOrderRequestUrl || '',
         agvOrderEndUrl: device.agvOrderEndUrl || '',
         agvOrderPriorityUrl: device.agvOrderPriorityUrl || '',
@@ -257,35 +275,44 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     processFileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const fileContent = event.target?.result as string;
-          const rows = fileContent.split('\n').filter(row => row.trim() !== '');
-          const newMappings: AlarmMappingItem[] = rows.slice(1).map((row, index) => {
-            const parts = row.split(',').map(s => s.trim());
-            return {
-              id: (Date.now() + index).toString(),
-              address: parts[0] || 'N/A',
-              alarmBit: parseInt(parts[1]) || 0,
-              code: parts[2] || 'N/A',
-              content: parts[3] || 'N/A',
-              solution: parts[4] || 'N/A',
-              level1Alarm: parts[5] || 'N/A',
-              level2Alarm: parts[6] || 'N/A',
-            };
-          });
-          setAlarmMappings(prev => [...prev, ...newMappings]);
+    if (file && device) {
+      setIsImporting(true);
+      try {
+        const response = await api.post(`${backendDomain}/api/Equipment/AlarmMapDataImport`, {
+          lineSystemName: device.lineId,
+          equipmentSystemName: device.id,
+          filePath: file.name
+        });
+        
+        if (response.data && response.data.code === 200 && response.data.data) {
+          const alarmData = response.data.data.alarmData || [];
+          const newMappings: AlarmMappingItem[] = alarmData.map((item: any, index: number) => ({
+            id: (Date.now() + index).toString(),
+            address: item.registerAddress || 'N/A',
+            alarmBit: item.registerBit ? parseInt(item.registerBit) : 0,
+            code: item.alarmCode || 'N/A',
+            content: item.alarmNote || 'N/A',
+            solution: item.alarmSolution || 'N/A',
+            level1Alarm: item.oneLevelItem || 'N/A',
+            level2Alarm: item.twoLevelItem || 'N/A',
+          }));
+          setAlarmMappings(newMappings);
           alert('導入成功');
-        } catch (err) {
-          console.error(err);
-          alert('導入失敗，請檢查文件格式');
+        } else {
+          alert('導入失敗：' + (response.data?.message || '未知錯誤'));
         }
-      };
-      reader.readAsText(file);
+      } catch (err: any) {
+        console.error(err);
+        alert('網絡錯誤：導入失敗，請檢查服務器。' + (err.message || ''));
+      } finally {
+        setIsImporting(false);
+        // Reset input value to allow selecting the same file again
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
     }
   };
 
@@ -381,6 +408,10 @@ const handleTestConnection = async () => {
           processAddressLength: formData.processAddressLength,
           processParamAddress: formData.processParamAddress,
           processParamLength: formData.processParamLength,
+          alarmReadMethod: formData.alarmReadMethod,
+          alarmBitLength: formData.alarmBitLength,
+          processReadMethod: formData.processReadMethod,
+          processBitLength: formData.processBitLength,
           agvOrderRequestUrl: formData.agvOrderRequestUrl,
           agvOrderEndUrl: formData.agvOrderEndUrl,
           agvOrderPriorityUrl: formData.agvOrderPriorityUrl,
@@ -515,8 +546,37 @@ const handleTestConnection = async () => {
     setEditingRows(editingRows.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
-  const handleRefreshAlarmMappings = () => {
-    alert('已從服務器刷新報警映射數據');
+  const handleRefreshAlarmMappings = async () => {
+    if (!device) return;
+    setIsRefreshing(true);
+    try {
+      const response = await api.post(`${backendDomain}/api/Equipment/AlarmMapDataRefresh`, {
+        equipmentSystemName: device.id
+      });
+      
+      if (response.data && response.data.code === 200 && response.data.data) {
+        const alarmData = response.data.data.alarmData || [];
+        const newMappings: AlarmMappingItem[] = alarmData.map((item: any, index: number) => ({
+          id: (Date.now() + index).toString(),
+          address: item.registerAddress || 'N/A',
+          alarmBit: item.registerBit ? parseInt(item.registerBit) : 0,
+          code: item.alarmCode || 'N/A',
+          content: item.alarmNote || 'N/A',
+          solution: item.alarmSolution || 'N/A',
+          level1Alarm: item.oneLevelItem || 'N/A',
+          level2Alarm: item.twoLevelItem || 'N/A',
+        }));
+        setAlarmMappings(newMappings);
+        alert('刷新成功');
+      } else {
+        alert('刷新失敗：' + (response.data?.message || '未知錯誤'));
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('網絡錯誤：刷新失敗，請檢查服務器。' + (err.message || ''));
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleSaveAlarmMappings = () => {
@@ -542,21 +602,23 @@ const handleTestConnection = async () => {
             ref={fileInputRef} 
             onChange={handleFileChange} 
             className="hidden" 
-            accept=".csv,.txt"
+            accept=".xlsx,.xls,.csv,.txt"
           />
           <button 
             onClick={handleRefreshAlarmMappings}
-            className="flex items-center px-4 py-2 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-lg text-sm font-medium transition-all"
+            disabled={isRefreshing}
+            className="flex items-center px-4 py-2 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RotateCw size={16} className="mr-2" />
-            刷新
+            <RotateCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? '處理中...' : '刷新'}
           </button>
           <button 
             onClick={handleImportClick}
-            className="flex items-center px-4 py-2 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-lg text-sm font-medium transition-all"
+            disabled={isImporting}
+            className="flex items-center px-4 py-2 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Upload size={16} className="mr-2" />
-            導入映射表
+            {isImporting ? '處理中...' : '導入映射表'}
           </button>
           <button 
             onClick={handleSaveAlarmMappings}
@@ -565,46 +627,58 @@ const handleTestConnection = async () => {
             <Save size={16} className="mr-2" />
             保存
           </button>
-          <button className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm">
-            <Plus size={16} className="mr-2" />
-            新增報警點
-          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden border border-slate-100 rounded-xl">
-        <div className="overflow-x-auto h-full">
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警地址</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警位</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警代碼</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警內容</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">一級報警</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">二級報警</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">報警解決方法</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
+      <div className="flex-1 overflow-hidden border border-slate-100 rounded-xl flex flex-col">
+        <div className="overflow-auto flex-1 max-h-[600px]">
+          <table className="w-full border-collapse text-left relative">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-slate-50 border-b border-slate-100 shadow-sm relative z-20">
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">報警地址</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">報警位</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">報警代碼</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">報警內容</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">一級報警</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">二級報警</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 w-[300px] min-w-[300px]">報警解決方法</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right bg-slate-50">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {alarmMappings.length > 0 ? (
-                alarmMappings.map((mapping) => (
+              {paginatedAlarms.length > 0 ? (
+                paginatedAlarms.map((mapping) => (
                   <tr key={mapping.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-mono text-slate-600">{mapping.address}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.alarmBit}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-700">{mapping.code}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.content}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.level1Alarm}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.level2Alarm}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{mapping.solution}</td>
-                    <td className="px-6 py-4 text-sm text-right">
-                      <button className="text-slate-400 hover:text-blue-600 mr-3">
-                        <Edit3 size={16} />
-                      </button>
-                      <button className="text-slate-400 hover:text-red-600">
-                        <Trash2 size={16} />
-                      </button>
+                    <td className="px-6 py-3 text-sm font-mono text-slate-600 align-top">
+                      <div className="line-clamp-3" title={mapping.address}>{mapping.address}</div>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-slate-600 align-top">
+                      <div className="line-clamp-3" title={mapping.alarmBit.toString()}>{mapping.alarmBit}</div>
+                    </td>
+                    <td className="px-6 py-3 text-sm font-medium text-slate-700 align-top">
+                      <div className="line-clamp-3" title={mapping.code}>{mapping.code}</div>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-slate-600 align-top">
+                      <div className="line-clamp-3" title={mapping.content}>{mapping.content}</div>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-slate-600 align-top">
+                      <div className="line-clamp-3" title={mapping.level1Alarm}>{mapping.level1Alarm}</div>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-slate-600 align-top">
+                      <div className="line-clamp-3" title={mapping.level2Alarm}>{mapping.level2Alarm}</div>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-slate-600 align-top w-[300px] min-w-[300px]">
+                      <div className="line-clamp-3" title={mapping.solution}>{mapping.solution}</div>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-right align-top">
+                      <div className="flex justify-end space-x-2">
+                        <button className="text-slate-400 hover:text-blue-600">
+                          <Edit3 size={16} />
+                        </button>
+                        <button className="text-slate-400 hover:text-red-600">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -629,8 +703,26 @@ const handleTestConnection = async () => {
         </div>
       </div>
       
+
       <div className="mt-4 flex items-center justify-between text-xs text-slate-400 px-2">
         <p>共計 {alarmMappings.length} 條映射規則</p>
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={() => setAlarmCurrentPage(p => Math.max(1, p - 1))}
+            disabled={alarmCurrentPage === 1}
+            className="px-2 py-1 border rounded hover:bg-slate-50 disabled:opacity-50"
+          >
+            上一頁
+          </button>
+          <span>{alarmCurrentPage} / {Math.max(1, alarmTotalPages)}</span>
+          <button 
+            onClick={() => setAlarmCurrentPage(p => Math.min(alarmTotalPages, p + 1))}
+            disabled={alarmCurrentPage === alarmTotalPages || alarmTotalPages === 0}
+            className="px-2 py-1 border rounded hover:bg-slate-50 disabled:opacity-50"
+          >
+            下一頁
+          </button>
+        </div>
         <p>支持 CSV 格式導入 (格式: 地址, 報警位, 代碼, 內容, 解決方法, 一級報警, 二級報警)</p>
       </div>
     </div>
@@ -638,8 +730,8 @@ const handleTestConnection = async () => {
 
   const getProcessMappingLength = () => {
     const baseLength = formData.processParamLength || 0;
-    if (formData.plcReadMethod === '按位讀取') {
-      const bitsMatch = formData.bitLength?.match(/(\d+)/);
+    if (formData.processReadMethod === '按位讀取') {
+      const bitsMatch = formData.processBitLength?.match(/(\d+)/);
       const bits = bitsMatch ? parseInt(bitsMatch[1], 10) : 16;
       return baseLength * bits;
     }
@@ -1071,68 +1163,111 @@ const handleTestConnection = async () => {
 
               {(device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) && (
                 <div className="mt-8 pt-6 border-t border-slate-100">
-                  <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center">
+                  <h4 className="text-sm font-bold text-slate-800 flex items-center mb-6">
                     <Database size={16} className="mr-2 text-indigo-600" /> PLC 數據地址配置
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">報警地址</label>
-                      <input 
-                        type="text" 
-                        value={formData.alarmAddress} 
-                        onChange={(e) => setFormData({...formData, alarmAddress: e.target.value})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                        placeholder="例如: D1000"
-                      />
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* 報警模塊 */}
+                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                      <h5 className="text-sm font-bold text-slate-700 mb-4 flex items-center">
+                        <div className="w-1.5 h-4 bg-red-500 rounded-sm mr-2"></div>
+                        報警模塊
+                      </h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">報警地址</label>
+                          <input 
+                            type="text" 
+                            value={formData.alarmAddress} 
+                            onChange={(e) => setFormData({...formData, alarmAddress: e.target.value})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm" 
+                            placeholder="例如: D1000"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">報警參數長度</label>
+                          <input 
+                            type="number" 
+                            value={formData.alarmAddressLength} 
+                            onChange={(e) => setFormData({...formData, alarmAddressLength: parseInt(e.target.value) || 0})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm" 
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">讀取方式</label>
+                          <select 
+                            value={formData.alarmReadMethod} 
+                            onChange={(e) => setFormData({...formData, alarmReadMethod: e.target.value})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all text-sm"
+                          >
+                            <option value="按字讀取">按字讀取</option>
+                            <option value="按位讀取">按位讀取</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">位長度</label>
+                          <select 
+                            value={formData.alarmBitLength} 
+                            onChange={(e) => setFormData({...formData, alarmBitLength: e.target.value})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all text-sm"
+                          >
+                            <option value="16Bits">16Bits</option>
+                            <option value="32Bits">32Bits</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">報警地址長度</label>
-                      <input 
-                        type="number" 
-                        value={formData.alarmAddressLength} 
-                        onChange={(e) => setFormData({...formData, alarmAddressLength: parseInt(e.target.value) || 0})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">讀取方式</label>
-                      <select 
-                        value={formData.plcReadMethod} 
-                        onChange={(e) => setFormData({...formData, plcReadMethod: e.target.value})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all"
-                      >
-                        <option value="按字讀取">按字讀取</option>
-                        <option value="按位讀取">按位讀取</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">工藝參數地址</label>
-                      <input 
-                        type="text" 
-                        value={formData.processParamAddress} 
-                        onChange={(e) => setFormData({...formData, processParamAddress: e.target.value})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                        placeholder="例如: D1100"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">工藝參數長度</label>
-                      <input 
-                        type="number" 
-                        value={formData.processParamLength} 
-                        onChange={(e) => setFormData({...formData, processParamLength: parseInt(e.target.value) || 0})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" 
-                      />
-                    </div>                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-slate-700">位長度</label>
-                      <select 
-                        value={formData.bitLength} 
-                        onChange={(e) => setFormData({...formData, bitLength: e.target.value})} 
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all"
-                      >
-                        <option value="16Bits">16Bits</option>
-                        <option value="32Bits">32Bits</option>
-                      </select>
+
+                    {/* 工藝模塊 */}
+                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                      <h5 className="text-sm font-bold text-slate-700 mb-4 flex items-center">
+                        <div className="w-1.5 h-4 bg-blue-500 rounded-sm mr-2"></div>
+                        工藝模塊
+                      </h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">工藝地址</label>
+                          <input 
+                            type="text" 
+                            value={formData.processParamAddress} 
+                            onChange={(e) => setFormData({...formData, processParamAddress: e.target.value})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm" 
+                            placeholder="例如: D1100"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">工藝參數長度</label>
+                          <input 
+                            type="number" 
+                            value={formData.processParamLength} 
+                            onChange={(e) => setFormData({...formData, processParamLength: parseInt(e.target.value) || 0})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm" 
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">讀取方式</label>
+                          <select 
+                            value={formData.processReadMethod} 
+                            onChange={(e) => setFormData({...formData, processReadMethod: e.target.value})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all text-sm"
+                          >
+                            <option value="按字讀取">按字讀取</option>
+                            <option value="按位讀取">按位讀取</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">位長度</label>
+                          <select 
+                            value={formData.processBitLength} 
+                            onChange={(e) => setFormData({...formData, processBitLength: e.target.value})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all text-sm"
+                          >
+                            <option value="16Bits">16Bits</option>
+                            <option value="32Bits">32Bits</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

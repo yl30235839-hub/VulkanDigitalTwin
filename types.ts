@@ -8,7 +8,10 @@ export enum MachineStatus {
 
 export enum LineType {
   NVIDIA = 'VKLine_NVIDIA',
-  APPLE = 'VKLine_APPLE'
+  APPLE = 'VKLine_APPLE',
+  ORACLE = 'VKLine_Oracle',
+  MICROSOFT = 'VKLine_Microsoft',
+  META = 'VKLine_Meta'
 }
 
 export enum EquipmentType {
@@ -95,6 +98,10 @@ export interface Equipment {
   processParamAddress?: string;
   processParamLength?: number;
   bitLength?: string;
+  alarmReadMethod?: string;
+  alarmBitLength?: string;
+  processReadMethod?: string;
+  processBitLength?: string;
   // AGV Order Management fields
   agvOrderRequestUrl?: string;
   agvOrderEndUrl?: string;
