@@ -280,10 +280,15 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     if (file && device) {
       setIsImporting(true);
       try {
-        const response = await api.post(`${backendDomain}/api/Equipment/AlarmMapDataImport`, {
-          lineSystemName: device.lineId,
-          equipmentSystemName: device.id,
-          filePath: file.name
+        const importFormData = new FormData();
+        importFormData.append('lineSystemName', device.lineId);
+        importFormData.append('equipmentSystemName', device.id);
+        importFormData.append('formFile', file);
+        
+        const response = await api.post(`${backendDomain}/api/Equipment/AlarmMapDataImport`, importFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         });
         
         if (response.data && response.data.code === 200 && response.data.data) {
