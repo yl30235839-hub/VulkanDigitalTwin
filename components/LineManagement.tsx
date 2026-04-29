@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MOCK_LINES } from '../constants';
+import { MOCK_LINES, backendDomain } from '../constants';
 import { MachineStatus, ProductionLine, LineType, Equipment, EquipmentType } from '../types';
 import api from '../services/api';
 import { 
@@ -40,14 +40,50 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
   const [isUploading, setIsUploading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const exportFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleExportClick = () => {
-    exportFileInputRef.current?.click();
+  const handleExportClick = async () => {
+    setIsExporting(true);
+    try {
+      const response = await api.post(`${backendDomain}/api/Factory/SaveProject`, {}, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data && response.data.code === 200) {
+        const projectStr = response.data.data?.project;
+        if (projectStr) {
+          const blob = new Blob([projectStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'factory.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          alert('工廠信息已成功導出。');
+        } else {
+          alert('導出失敗：未獲取到工廠數據');
+        }
+      } else {
+        alert(`導出失敗: ${response.data?.code === 404 ? '找不到路徑' : (response.data?.message || '未知錯誤')}`);
+      }
+    } catch (error: any) {
+      console.error('Export Error:', error);
+      if (error.message === 'Network Error') {
+        alert('通訊異常：無法連線至後端服務。請確保後端服務已啟動並信任 SSL 憑證。');
+      } else {
+        const errorMsg = error.response?.data?.message || error.message || '網絡錯誤';
+        alert(`導出過程發生錯誤: ${errorMsg}`);
+      }
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,35 +138,6 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const handleExportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsExporting(true);
-    try {
-      // 調用指定的 API 地址進行工廠導出保存
-      const response = await api.post('https://localhost:7044/api/Factory/SaveProject', {
-        fileName: file.name
-      });
-
-      if (response.data.code === 200) {
-        alert(response.data.message || '工廠信息已成功導出。');
-      } else {
-        alert(`導出失敗: ${response.data.code === 404 ? '找不到路徑' : response.data.message}`);
-      }
-    } catch (error: any) {
-      console.error('Export Error:', error);
-      if (error.message === 'Network Error') {
-        alert('通訊異常：無法連線至 https://localhost:7044。請確保後端服務已啟動並信任 SSL 憑證。');
-      } else {
-        alert(`導出過程發生錯誤: ${error.message}`);
-      }
-    } finally {
-      setIsExporting(false);
-      if (exportFileInputRef.current) exportFileInputRef.current.value = '';
     }
   };
 
@@ -308,13 +315,6 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
           type="file" 
           ref={fileInputRef} 
           onChange={handleFileChange} 
-          accept=".factory" 
-          className="hidden" 
-        />
-        <input 
-          type="file" 
-          ref={exportFileInputRef} 
-          onChange={handleExportFileChange} 
           accept=".factory" 
           className="hidden" 
         />
