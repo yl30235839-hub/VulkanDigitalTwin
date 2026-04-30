@@ -93,9 +93,28 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
     setIsUploading(true);
 
     try {
+      if (event.target) event.target.value = '';
+      // 解析其文檔内容,生成對應的json字符串
+      const fileContent = await file.text();
+      let jsonString = '';
+      try {
+        const parsed = JSON.parse(fileContent);
+        jsonString = JSON.stringify(parsed);
+      } catch (e) {
+        throw new Error('選擇的文件不是有效的 JSON 格式');
+      }
+      // 原因分析：由於在 C# (ASP.NET Core) 等後端框架中，如果 API 參數未加上 [FromBody] 屬性，
+      // 默認可能會嘗試從 Form Data 中綁定參數。當我們發送 application/json 的 { project: ... } 時，
+      // 後端模型綁定可能無法識別，導致接收到的字符串為空。或者後端本身期望 FormData 格式。
+      // 解決方案：為了兼容這兩種情況，將請求負載改為 FormData 格式，保證後端能正確解析名為 "project" 的參數。
+      const formData = new FormData();
+      formData.append('project', jsonString);
+      
       // 調用指定的 API 地址加載工廠項目
-      const response = await api.post('https://localhost:7044/api/Factory/LoadProject', {
-        fileName: file.name
+      const response = await api.post(`${backendDomain}/api/Factory/LoadProject`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       if (response.data.code === 200) {
@@ -131,7 +150,7 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
     } catch (error: any) {
       console.error('Load Project Error:', error);
       if (error.message === 'Network Error') {
-        alert('通訊異常：無法連線至 https://localhost:7044。請確保後端服務已啟動並信任 SSL 憑證。');
+        alert(`通訊異常：無法連線至 ${backendDomain}。請確保後端服務已啟動並信任 SSL 憑證。`);
       } else {
         alert(`加載過程發生錯誤: ${error.message}`);
       }
@@ -315,7 +334,7 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
           type="file" 
           ref={fileInputRef} 
           onChange={handleFileChange} 
-          accept=".factory" 
+          accept=".json" 
           className="hidden" 
         />
         <button 
