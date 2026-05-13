@@ -32,9 +32,15 @@ const App: React.FC = () => {
   const [editingPersonnel, setEditingPersonnel] = useState<Personnel | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
 
-  const handleLogin = (username: string) => {
+  const handleLogin = (username: string, fetchedLines?: ProductionLine[], fetchedEquipments?: Equipment[]) => {
     setIsAuthenticated(true);
     setCurrentUsername(username);
+    if (fetchedLines && fetchedLines.length > 0) {
+      setAllLines(fetchedLines);
+    }
+    if (fetchedEquipments && fetchedEquipments.length > 0) {
+      setAllEquipment(fetchedEquipments);
+    }
     setCurrentPage(username === 'admin' ? 'LINES' : '3D_VIEW');
   };
 

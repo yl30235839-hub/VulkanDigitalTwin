@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { KeyRound, User, Lock, ArrowRight } from 'lucide-react';
 import api from '../services/api';
 import { backendDomain } from '../constants';
+import { ProductionLine, Equipment, MachineStatus, LineType, EquipmentType } from '../types';
 
 interface LoginPageProps {
-  onLogin: (username: string) => void;
+  onLogin: (username: string, lines?: ProductionLine[], equipments?: Equipment[]) => void;
   onGoToRegister: () => void;
 }
 
@@ -28,10 +29,45 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister }) => {
 
       const { code, message, data } = response.data;
 
-      if (data && data.result === 1) {
+      if (data && (data.result === "1" || data.result === 1)) {
         // Success Handling
+        const fetchedLines: ProductionLine[] = [];
+        const fetchedEquipments: Equipment[] = [];
+        
+        if (data.factoryInfos && Array.isArray(data.factoryInfos)) {
+          data.factoryInfos.forEach((info: any) => {
+            if (info.manuLineInfo) {
+              fetchedLines.push({
+                id: info.manuLineInfo.sysName || '',
+                factoryId: 'F1',
+                name: info.manuLineInfo.lineName || info.manuLineInfo.sysName || '',
+                description: info.manuLineInfo.description || '',
+                lineType: (info.manuLineInfo.typeString as LineType) || LineType.NVIDIA,
+                status: MachineStatus.Running,
+                outputPerHour: 100, // mock default
+                targetOutput: 1000 // mock default
+              });
+            }
+            if (info.enterLineEquipmentInfos && Array.isArray(info.enterLineEquipmentInfos)) {
+              info.enterLineEquipmentInfos.forEach((equip: any) => {
+                fetchedEquipments.push({
+                  id: equip.sysName || '',
+                  lineId: info.manuLineInfo?.sysName || '',
+                  name: equip.equipmentName || equip.sysName || '',
+                  type: (equip.typeString as EquipmentType) || EquipmentType.AssemblyEquipment,
+                  description: equip.description || '',
+                  status: MachineStatus.Running,
+                  temperature: 25,
+                  vibration: 0.1,
+                  lastMaintenance: '2025-01-01'
+                });
+              });
+            }
+          });
+        }
+
         localStorage.setItem('mes_token', `token_${username}`);
-        onLogin(username);
+        onLogin(username, fetchedLines, fetchedEquipments);
       } else {
         // Failure Handling (result === 0)
         setError(message || '賬號或密碼錯誤，要求用戶重新輸入。');
