@@ -163,7 +163,7 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
   const handleEnterLine = async (lineId: string) => {
     setEnteringLineId(lineId);
     try {
-      const response = await api.post('https://localhost:7044/api/Line/EnterLine', {
+      const response = await api.post(`${backendDomain}/api/Line/EnterLine`, {
         lineSystemName: lineId
       });
 
@@ -228,7 +228,7 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
       const lineNumber = match ? match[1] : '未知';
 
       if (error.message === 'Network Error') {
-        alert(`通訊異常 (報錯行號: ${lineNumber})：無法連線至 https://localhost:7044。請確保後端服務已啟動並信任 SSL 憑證。`);
+        alert(`通訊異常 (報錯行號: ${lineNumber})：無法連線至 ${backendDomain}。請確保後端服務已啟動並信任 SSL 憑證。`);
       } else {
         alert(`進入過程發生錯誤 (報錯行號: ${lineNumber}): ${error.response?.data?.message || error.message}`);
       }
@@ -250,7 +250,7 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
     setIsSavingFactory(true);
     try {
       // 調用指定的 API 地址，傳入 site (code) 與 floor
-      const response = await api.post('https://localhost:7044/api/Factory/FactoryMaintenance', {
+      const response = await api.post(`${backendDomain}/api/Factory/FactoryMaintenance`, {
         site: localFactoryInfo.code,
         floor: localFactoryInfo.floor
       });
@@ -266,7 +266,7 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
     } catch (error: any) {
       console.error('Save Factory Error:', error);
       if (error.message === 'Network Error') {
-        alert('通訊異常：無法連線至 https://localhost:7044。請確保後端服務已啟動並信任 SSL 憑證。');
+        alert(`通訊異常：無法連線至 ${backendDomain}。請確保後端服務已啟動並信任 SSL 憑證。`);
       } else {
         alert(`保存過程發生錯誤: ${error.message}`);
       }
@@ -281,7 +281,7 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
     setIsCreatingLine(true);
     try {
       // 調用指定的 API 地址進行產綫創建
-      const response = await api.post('https://localhost:7044/api/Factory/CreateLine', {
+      const response = await api.post(`${backendDomain}/api/Factory/CreateLine`, {
         lineType: newLineData.lineType,
         lineName: newLineData.name,
         description: newLineData.description
@@ -317,7 +317,7 @@ const LineManagement: React.FC<LineManagementProps> = ({ onViewEquipment, onUpda
     } catch (error: any) {
       console.error('Create Line Error:', error);
       if (error.message === 'Network Error') {
-        alert('通訊異常：無法連線至 https://localhost:7044/api/Factory/CreateLine。請檢查後端服務是否運行正常。');
+        alert(`通訊異常：無法連線至 ${backendDomain}/api/Factory/CreateLine。請檢查後端服務是否運行正常。`);
       } else {
         alert(`創建過程發生錯誤: ${error.message}`);
       }

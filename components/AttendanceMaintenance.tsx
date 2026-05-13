@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { backendDomain } from '../constants';
 import api from '../services/api';
 import RegisterPage from './RegisterPage';
 import { Personnel, UserData } from '../types';
@@ -162,7 +163,7 @@ const AttendanceMaintenance: React.FC<AttendanceMaintenanceProps> = ({
     
     try {
       if (activeView === 'RECORDS') {
-        const response = await api.post('https://localhost:7044/api/CheckIn/AttendanceDataRefresh', {
+        const response = await api.post(`${backendDomain}/api/CheckIn/AttendanceDataRefresh`, {
           lineSystemName: lineId || "",
           equipmentSystemName: deviceId || ""
         });
@@ -182,7 +183,7 @@ const AttendanceMaintenance: React.FC<AttendanceMaintenanceProps> = ({
           showNotification(`考勤紀錄刷新失敗: ${message}`, 'error');
         }
       } else if (activeView === 'PERSONNEL') {
-        const response = await api.post('https://localhost:7044/api/CheckIn/UserDataRefresh', {
+        const response = await api.post(`${backendDomain}/api/CheckIn/UserDataRefresh`, {
           lineSystemName: lineId || '',
           equipmentSystemName: deviceId || ''
         });
@@ -249,7 +250,7 @@ const AttendanceMaintenance: React.FC<AttendanceMaintenanceProps> = ({
         }
       }
 
-      const response = await api.post('https://localhost:7044/api/CheckIn/BatchAddUser', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/BatchAddUser`, {
         lineSystemName: lineId || "",
         equipmentSystemName: deviceId || "",
         fileLocation: fullPath
@@ -291,7 +292,7 @@ const AttendanceMaintenance: React.FC<AttendanceMaintenanceProps> = ({
     setIsDeletingId(person.id);
     setPersonToDelete(null);
     try {
-      const response = await api.post('https://localhost:7044/api/CheckIn/DeleteUser', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/DeleteUser`, {
         lineSystemName: lineId || "",
         equipmentSystemName: deviceId || "",
         userID: person.employeeId
@@ -316,7 +317,7 @@ const AttendanceMaintenance: React.FC<AttendanceMaintenanceProps> = ({
   const handleOpenEditModal = async (person: Personnel) => {
     setIsEditingId(person.id);
     try {
-      const response = await api.post('https://localhost:7044/api/CheckIn/EditUser', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/EditUser`, {
         lineSystemName: lineId || "",
         equipmentSystemName: deviceId || "",
         userId: person.employeeId
@@ -340,7 +341,7 @@ const AttendanceMaintenance: React.FC<AttendanceMaintenanceProps> = ({
   const handleAddUser = async () => {
     setIsAddingUser(true);
     try {
-      const response = await api.post('https://localhost:7044/api/CheckIn/EnterAddUser', {
+      const response = await api.post(`${backendDomain}/api/CheckIn/EnterAddUser`, {
         lineSystemName: lineId || "",
         equipmentSystemName: deviceId || ""
       });

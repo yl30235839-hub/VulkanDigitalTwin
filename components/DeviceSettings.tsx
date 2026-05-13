@@ -23,10 +23,14 @@ interface AlarmMappingItem {
 
 interface ProcessMappingItem {
   id: string;
+  name?: string;
+  description?: string;
+  function?: string;
+  channelNumber?: string;
   address: string;
   parameterBit: string;
   parameterType: string;
-  dataType: string;
+  
 }
 
 interface DeviceSettingsProps {
@@ -98,9 +102,9 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, allEquipment = 
   };
 
 const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
-    { id: '1', address: 'D200', parameterBit: '0', parameterType: '主軸轉速控制', dataType: 'Float' },
-    { id: '2', address: 'D204', parameterBit: '1', parameterType: '進給速度控制', dataType: 'Float' },
-    { id: '3', address: 'D208', parameterBit: '2', parameterType: '加工壓力控制', dataType: 'Float' },
+    { id: '1', name: '轉速配置', description: '控制主軸轉速', function: 'Read', channelNumber: 'CH1', address: 'D200', parameterBit: '0', parameterType: '主軸轉速控制',  },
+    { id: '2', name: '進給配置', description: '控制進給速度', function: 'Read', channelNumber: 'CH1', address: 'D204', parameterBit: '1', parameterType: '進給速度控制',  },
+    { id: '3', name: '壓力配置', description: '控制加工壓力', function: 'Read', channelNumber: 'CH1', address: 'D208', parameterBit: '2', parameterType: '加工壓力控制',  },
   ]);
   
   // Database Connection States
@@ -130,6 +134,10 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
 
   // Process Mapping Modal State
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+  const [isProcessMappingEditing, setIsProcessMappingEditing] = useState(false);
+  const [isProcessRefreshing, setIsProcessRefreshing] = useState(false);
+  const [draggedProcessIndex, setDraggedProcessIndex] = useState<number | null>(null);
+  const [tempProcessMappings, setTempProcessMappings] = useState<ProcessMappingItem[]>([]);
   const SYSTEM_PROCESS_PARAMETERS = [
     '工藝結果',
     '工藝排產',
@@ -137,15 +145,155 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     'AGV訂單關閉'
   ];
   const [selectedProcessType, setSelectedProcessType] = useState(SYSTEM_PROCESS_PARAMETERS[0]);
+  const [newProcessName, setNewProcessName] = useState('');
+  const [newProcessDesc, setNewProcessDesc] = useState('');
+  const [newProcessFunc, setNewProcessFunc] = useState('Read');
+  const [newProcessChannel, setNewProcessChannel] = useState('');
+
+  const startProcessMappingEdit = () => {
+    const baseLength = formData.processParamLength || 0;
+    let totalLength = baseLength;
+    if (formData.processReadMethod === '按位讀取') {
+      const bitsMatch = formData.processBitLength?.match(/(\d+)/);
+      const bits = bitsMatch ? parseInt(bitsMatch[1], 10) : 16;
+      totalLength = baseLength * bits;
+    }
+
+    const newTemp = Array.from({ length: totalLength }).map((_, i) => {
+      if (processMappings[i]) return processMappings[i];
+      let autoAddress = '-';
+      let autoBit = '-';
+      if (formData.processReadMethod === '按字讀取' && formData.processParamAddress) {
+         const match = formData.processParamAddress.match(/^([A-Za-z]+)(\d+)$/);
+         if (match) {
+           const prefix = match[1];
+           const startNum = parseInt(match[2], 10);
+           autoAddress = prefix + (startNum + i);
+           autoBit = '0';
+         }
+      }
+      return {
+        id: `empty-${Date.now()}-${i}`,
+        name: '',
+        description: '',
+        function: '',
+        channelNumber: '',
+        address: autoAddress,
+        parameterBit: autoBit,
+        parameterType: ''
+      } as ProcessMappingItem;
+    });
+    setTempProcessMappings(newTemp);
+    setIsProcessMappingEditing(true);
+  };
+  
+    const handleRefreshProcessMappings = async () => {
+    if (!device) return;
+    setIsProcessRefreshing(true);
+    try {
+      const response = await api.post(`${backendDomain}/api/Equipment/ProcessMapDataRefresh`, {
+        equipmentSystemName: device.id
+      });
+      
+      if (response.data && response.data.code === 200 && response.data.data) {
+        const processData = response.data.data.processData || [];
+        const newMappings = processData.map((item: any, index: number) => ({
+          id: (Date.now() + index).toString(),
+          address: item.registerAddress || 'N/A',
+          parameterBit: item.registerBit ? item.registerBit.toString() : '0',
+          name: item.parameterName || '',
+          description: item.parameterDesc || '',
+          function: item.parameterFunc || 'Read',
+          channelNumber: item.channelNumber || '',
+          parameterType: item.parameterType || '',
+        }));
+        setProcessMappings(newMappings);
+        alert('刷新成功');
+      } else {
+        alert(response.data?.message || '刷新失敗');
+      }
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      alert('刷新發生錯誤，請稍後再試');
+    } finally {
+      setIsProcessRefreshing(false);
+    }
+  };
+
+  const saveProcessMappingEdit = () => {
+    const newProcessMappings = tempProcessMappings.map((item, idx) => {
+      let autoAddress = processMappings[idx]?.address || item.address || '-';
+      let autoBit = processMappings[idx]?.parameterBit || item.parameterBit || '-';
+
+      if (formData.processReadMethod === '按字讀取' && formData.processParamAddress) {
+         const match = formData.processParamAddress.match(/^([A-Za-z]+)(\d+)$/);
+         if (match) {
+           const prefix = match[1];
+           const startNum = parseInt(match[2], 10);
+           autoAddress = prefix + (startNum + idx);
+           autoBit = '0';
+         }
+      }
+
+      return {
+        ...item,
+        address: autoAddress,
+        parameterBit: autoBit,
+      };
+    });
+    setProcessMappings(newProcessMappings);
+    setIsProcessMappingEditing(false);
+  };
+
+  
+
+  const handleDragOverProcess = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDropProcess = (index: number) => {
+    if (draggedProcessIndex === null || draggedProcessIndex === index) return;
+    
+    const newMappings = [...tempProcessMappings];
+    const draggedItem = newMappings[draggedProcessIndex];
+    if (!draggedItem) return; // Prevent dragging empty items
+    
+    let targetIndex = index;
+    if (targetIndex >= newMappings.length) {
+      targetIndex = newMappings.length - 1; 
+      // If we remove an item and try to insert at the end, it should be at newMappings.length (after splice)
+    }
+    
+    newMappings.splice(draggedProcessIndex, 1);
+    // adjust targetIndex if needed since array shrank
+    if (index >= newMappings.length) {
+       targetIndex = newMappings.length;
+    } else {
+       targetIndex = index;
+    }
+    
+    newMappings.splice(targetIndex, 0, draggedItem);
+    setTempProcessMappings(newMappings);
+    setDraggedProcessIndex(null);
+  };
+
+  const handleDragStartProcess = (index: number) => {
+    if (index >= tempProcessMappings.length) return; // Prevent dragging empty items
+    setDraggedProcessIndex(index);
+  };
 
   const handleAddProcessMapping = () => {
     const newProcessId = (Date.now() + processMappings.length).toString();
     const newMapping: ProcessMappingItem = {
       id: newProcessId,
+      name: newProcessName,
+      description: newProcessDesc,
+      function: newProcessFunc,
+      channelNumber: newProcessChannel,
       address: 'DXXX',
       parameterBit: '0',
       parameterType: selectedProcessType,
-      dataType: 'Float'
+      
     };
     /* We add it to the front or back of the list, assuming we just expand the array. 
        Usually this list displays the mapped values and empty values, in this component 
@@ -154,6 +302,10 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     setProcessMappings([...processMappings, newMapping]);
     setIsProcessModalOpen(false);
     setSelectedProcessType(SYSTEM_PROCESS_PARAMETERS[0]);
+    setNewProcessName('');
+    setNewProcessDesc('');
+    setNewProcessFunc('Read');
+    setNewProcessChannel('');
   };
 
   // Schedule Layout State
@@ -198,7 +350,7 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     fingerprintId: '1',
     ip: '192.168.1.100',
     plcBrand: 'Keyence',
-    plcSeries: 'Modbus TCP',
+    plcSeries: 'MC-3E-ASCII',
     plcPort: '8000',
     plcProtocol: 'MC Protocol (TCP)',
     plcStation: '1',
@@ -212,7 +364,7 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     processAddress: '',
     processAddressLength: 0,
     processParamAddress: 'D6100',
-    processParamLength: 10,
+    processParamLength: 50,
     bitLength: '16Bits',
     alarmReadMethod: '按字讀取',
     alarmBitLength: '16Bits',
@@ -237,7 +389,7 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
         fingerprintId: device.fingerprintId || '1',
         ip: device.ip || '192.168.1.100',
         plcBrand: device.plcBrand || 'Keyence',
-        plcSeries: device.plcSeries || 'Modbus TCP',
+        plcSeries: device.plcSeries || 'MC-3E-ASCII',
         plcPort: device.plcPort || '8000',
         plcProtocol: device.plcProtocol || 'MC Protocol (TCP)',
         plcStation: device.plcStation || '1',
@@ -251,7 +403,7 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
         processAddress: device.processAddress || '',
         processAddressLength: device.processAddressLength || 0,
         processParamAddress: device.processParamAddress || 'D6100',
-        processParamLength: device.processParamLength || 10,
+        processParamLength: device.processParamLength || 50,
         bitLength: device.bitLength || '16Bits',
         alarmReadMethod: device.alarmReadMethod || '按字讀取',
         alarmBitLength: device.alarmBitLength || '16Bits',
@@ -336,7 +488,7 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
               address: parts[0] || 'N/A',
               parameterBit: parts[1] || '',
               parameterType: parts[2] || 'N/A',
-              dataType: parts[3] || 'Float'
+              
             };
           });
           setProcessMappings(prev => [...prev, ...newMappings]);
@@ -355,7 +507,7 @@ const handleTestConnection = async () => {
     setIsTesting(true);
     setConnectionResult('TESTING');
     try {
-      const response = await fetch('https://localhost:7044/api/Equipment/CommLinkTest', {
+      const response = await fetch(`${backendDomain}/api/Equipment/CommLinkTest`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -386,11 +538,11 @@ const handleTestConnection = async () => {
     
     try {
       if (device.type === EquipmentType.AssemblyEquipment || device.type === EquipmentType.TestingEquipment || device.type === EquipmentType.WaterVaporEquipment) {
-        let endpoint = 'https://localhost:7044/api/Equipment/AEMaintenance';
+        let endpoint = `${backendDomain}/api/Equipment/AEMaintenance`;
         if (device.type === EquipmentType.TestingEquipment) {
-          endpoint = 'https://localhost:7044/api/Equipment/TEMaintenance';
+          endpoint = `${backendDomain}/api/Equipment/TEMaintenance`;
         } else if (device.type === EquipmentType.WaterVaporEquipment) {
-          endpoint = 'https://localhost:7044/api/Equipment/WEMaintenance';
+          endpoint = `${backendDomain}/api/Equipment/WEMaintenance`;
         }
         const response = await api.post(endpoint, {
           lineSystemName: device.lineId,
@@ -430,7 +582,7 @@ const handleTestConnection = async () => {
           alert(`保存失敗: ${response.data.message || '未知錯誤'}`);
         }
       } else if (device.type === EquipmentType.CheckinEquipment) {
-        const response = await api.post('https://localhost:7044/api/Equipment/CEMaintenance', {
+        const response = await api.post(`${backendDomain}/api/Equipment/CEMaintenance`, {
           lineSystemName: device.lineId,
           equipmentSystemName: device.id,
           equipmentName: formData.name,
@@ -760,10 +912,35 @@ const handleTestConnection = async () => {
         </div>
         
         <div className="flex space-x-3">
-          <button onClick={() => setIsProcessModalOpen(true)} className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm">
-            <Plus size={16} className="mr-2" />
-            新增參數點
-          </button>
+          {isProcessMappingEditing ? (
+            <button onClick={saveProcessMappingEdit} className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm">
+              <Check size={16} className="mr-2" />
+              確定
+            </button>
+          ) : (
+            <>
+              <button 
+                onClick={handleRefreshProcessMappings}
+                disabled={isProcessRefreshing}
+                className="flex items-center px-4 py-2 bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 rounded-lg text-sm font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RotateCw size={16} className={`mr-2 ${isProcessRefreshing ? 'animate-spin' : ''}`} />
+                {isProcessRefreshing ? '處理中...' : '刷新'}
+              </button>
+              <button 
+                onClick={startProcessMappingEdit} 
+                disabled={processMappings.length === 0}
+                className={`flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-all shadow-sm ${processMappings.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Edit3 size={16} className="mr-2" />
+                編輯模式
+              </button>
+              <button onClick={() => setIsProcessModalOpen(true)} className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm">
+                <Plus size={16} className="mr-2" />
+                新增參數點
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -774,38 +951,59 @@ const handleTestConnection = async () => {
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數地址</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數位</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數名稱</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數描述</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數功能</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">上料流道編號</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">參數類型</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">數據類型</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
+                
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {Array.from({ length: totalLength }).map((_, index) => {
-                const mapping = processMappings[index];
+                const baseMapping = processMappings[index];
+                const displayMapping = isProcessMappingEditing ? tempProcessMappings[index] : baseMapping;
+                
+                let autoAddress = baseMapping?.address || '-';
+                let autoBit = baseMapping?.parameterBit || '-';
+
+                if (formData.processReadMethod === '按字讀取' && formData.processParamAddress) {
+                   const match = formData.processParamAddress.match(/^([A-Za-z]+)(\d+)$/);
+                   if (match) {
+                     const prefix = match[1];
+                     const startNum = parseInt(match[2], 10);
+                     autoAddress = prefix + (startNum + index);
+                     autoBit = '0';
+                   }
+                }
+                
                 return (
-                  <tr key={mapping?.id || index} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-mono text-slate-600">{mapping?.address || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{mapping?.parameterBit || '-'}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-indigo-600">{mapping?.parameterType || '-'}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs">
-                        {mapping?.dataType || '-'}
+                  <tr 
+                    key={displayMapping?.id || index} 
+                    className={`transition-colors ${isProcessMappingEditing ? 'cursor-move hover:bg-slate-100' : 'hover:bg-slate-50'} ${draggedProcessIndex === index ? 'opacity-50' : ''}`}
+                    draggable={isProcessMappingEditing && !!displayMapping ? true : false}
+                    onDragStart={(e) => { if (isProcessMappingEditing && displayMapping) { handleDragStartProcess(index); } else { e.preventDefault(); } }}
+                    onDragOver={isProcessMappingEditing ? handleDragOverProcess : undefined}
+                    onDrop={(e) => { e.preventDefault(); if (isProcessMappingEditing) handleDropProcess(index); }}
+                  >
+                    <td className="px-6 py-4 text-sm font-mono text-slate-600 bg-slate-50/50">{autoAddress}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500 bg-slate-50/50">{autoBit}</td>
+                    <td className={`px-6 py-4 text-sm font-medium text-slate-800 ${isProcessMappingEditing ? 'pointer-events-none' : ''}`}>{displayMapping?.name || '-'}</td>
+                    <td className={`px-6 py-4 text-sm text-slate-500 ${isProcessMappingEditing ? 'pointer-events-none' : ''}`}>{displayMapping?.description || '-'}</td>
+                    <td className={`px-6 py-4 text-sm text-slate-500 ${isProcessMappingEditing ? 'pointer-events-none' : ''}`}>
+                      <span className={`px-2 py-1 rounded text-xs ${displayMapping?.function === 'Write' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {displayMapping?.function || 'Read'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-right">
-                      <button className="text-slate-400 hover:text-indigo-600 mr-3">
-                        <Edit3 size={16} />
-                      </button>
-                      <button className="text-slate-400 hover:text-red-600">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
+                    <td className={`px-6 py-4 text-sm text-slate-500 ${isProcessMappingEditing ? 'pointer-events-none' : ''}`}>{displayMapping?.channelNumber || '-'}</td>
+                    <td className={`px-6 py-4 text-sm font-medium text-indigo-600 ${isProcessMappingEditing ? 'pointer-events-none' : ''}`}>{displayMapping?.parameterType || '-'}</td>
+                    
                   </tr>
                 );
               })}
               {totalLength === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center">
+                  <td colSpan={8} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <Settings size={48} className="text-slate-200 mb-4" />
                       <p className="text-slate-400">目前尚無工藝映射數據 (長度設為為 0)</p>
@@ -1102,7 +1300,7 @@ const handleTestConnection = async () => {
                     value={formData.plcBrand} 
                     onChange={(e) => {
                       const newBrand = e.target.value;
-                      const newSeries = newBrand === 'Inovance' ? 'H5U' : 'Modbus TCP';
+                      const newSeries = newBrand === 'Inovance' ? 'H5U' : 'MC-3E-ASCII';
                       setFormData({...formData, plcBrand: newBrand, plcSeries: newSeries});
                     }} 
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all"
@@ -1124,7 +1322,10 @@ const handleTestConnection = async () => {
                         <option value="H3U">H3U</option>
                       </>
                     ) : (
-                      <option value="Modbus TCP">Modbus TCP</option>
+                      <>
+                        <option value="MC-3E-ASCII">MC-3E-ASCII</option>
+                        <option value="MC-3E-Binary">MC-3E-Binary</option>
+                      </>
                     )}
                   </select>
                 </div>
@@ -1250,28 +1451,7 @@ const handleTestConnection = async () => {
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm" 
                           />
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-700">讀取方式</label>
-                          <select 
-                            value={formData.processReadMethod} 
-                            onChange={(e) => setFormData({...formData, processReadMethod: e.target.value})} 
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all text-sm"
-                          >
-                            <option value="按字讀取">按字讀取</option>
-                            <option value="按位讀取">按位讀取</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-700">位長度</label>
-                          <select 
-                            value={formData.processBitLength} 
-                            onChange={(e) => setFormData({...formData, processBitLength: e.target.value})} 
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-all text-sm"
-                          >
-                            <option value="16Bits">16Bits</option>
-                            <option value="32Bits">32Bits</option>
-                          </select>
-                        </div>
+
                       </div>
                     </div>
                   </div>
@@ -1473,7 +1653,26 @@ const handleTestConnection = async () => {
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">參數名稱</label>
+                <input type="text" value={newProcessName} onChange={e => setNewProcessName(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="輸入參數名稱" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">參數描述</label>
+                <input type="text" value={newProcessDesc} onChange={e => setNewProcessDesc(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="輸入參數描述" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">參數功能</label>
+                <select value={newProcessFunc} onChange={e => setNewProcessFunc(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                  <option value="Read">Read</option>
+                  <option value="Write">Write</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">上料流道編號</label>
+                <input type="text" value={newProcessChannel} onChange={e => setNewProcessChannel(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="輸入流道編號" />
+              </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">參數類型</label>
                 <div className="border border-slate-200 rounded-lg overflow-hidden max-h-60 overflow-y-auto bg-slate-50 custom-scrollbar">

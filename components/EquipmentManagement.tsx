@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { backendDomain } from '../constants';
 import { MachineStatus, Equipment, EquipmentType } from '../types';
 import api from '../services/api';
 import { 
@@ -107,7 +108,7 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
   const handleSaveLineInfo = async () => {
     setIsSavingLine(true);
     try {
-      const response = await api.post('https://localhost:7044/api/Line/LineMaintenance', {
+      const response = await api.post(`${backendDomain}/api/Line/LineMaintenance`, {
         lineName: lineInfo.name,
         description: lineInfo.description,
         lineIP: lineInfo.hostIp,
@@ -127,7 +128,7 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
     } catch (error: any) {
       console.error('Save Line Info Error:', error);
       if (error.message === 'Network Error') {
-        alert('通訊異常：無法連線至 https://localhost:7044。請確保後端服務已啟動並信任 SSL 憑證。');
+        alert(`通訊異常：無法連線至 ${backendDomain}。請確保後端服務已啟動並信任 SSL 憑證。`);
       } else {
         alert(`保存過程發生錯誤: ${error.response?.data?.message || error.message}`);
       }
@@ -148,7 +149,7 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
       const equipmentTypeKey = Object.entries(EquipmentType).find(([_, value]) => value === newEquipData.type)?.[0] || newEquipData.type;
 
       // 調用指定的 API 地址進行設備新增
-      const response = await api.post('https://localhost:7044/api/Line/CreateEquipment', {
+      const response = await api.post(`${backendDomain}/api/Line/CreateEquipment`, {
         equipmentType: equipmentTypeKey,
         equipmentName: newEquipData.name,
         description: newEquipData.description
@@ -183,7 +184,7 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
     } catch (error: any) {
       console.error('Add Equipment Error:', error);
       if (error.message === 'Network Error') {
-        alert('通訊異常：無法連線至 https://localhost:7044。請確保後端服務已啟動並信任 SSL 憑證。');
+        alert(`通訊異常：無法連線至 ${backendDomain}。請確保後端服務已啟動並信任 SSL 憑證。`);
       } else {
         alert(`新增過程發生錯誤: ${error.response?.data?.message || error.message}`);
       }
@@ -196,7 +197,7 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
     if (equip.type === EquipmentType.CheckinEquipment) {
       setLoadingDeviceId(equip.id);
       try {
-        const response = await api.post('https://localhost:7044/api/Equipment/EnterCEquipment', {
+        const response = await api.post(`${backendDomain}/api/Equipment/EnterCEquipment`, {
           equipmentSystemName: equip.id
         });
         
@@ -214,11 +215,11 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
     } else if (equip.type === EquipmentType.AssemblyEquipment || equip.type === EquipmentType.TestingEquipment || equip.type === EquipmentType.WaterVaporEquipment) {
       setLoadingDeviceId(equip.id);
       try {
-        let endpoint = 'https://localhost:7044/api/Equipment/EnterAEquipment';
+        let endpoint = `${backendDomain}/api/Equipment/EnterAEquipment`;
         if (equip.type === EquipmentType.TestingEquipment) {
-          endpoint = 'https://localhost:7044/api/Equipment/EnterTEquipment';
+          endpoint = `${backendDomain}/api/Equipment/EnterTEquipment`;
         } else if (equip.type === EquipmentType.WaterVaporEquipment) {
-          endpoint = 'https://localhost:7044/api/Equipment/EnterWVEquipment';
+          endpoint = `${backendDomain}/api/Equipment/EnterWVEquipment`;
         }
         const response = await api.post(endpoint, {
           lineSystemName: equip.lineId,
@@ -494,8 +495,6 @@ const EquipmentManagement: React.FC<EquipmentManagementProps> = ({ lineId, lineD
                   <option value={EquipmentType.AssemblyEquipment}>{EquipmentType.AssemblyEquipment}</option>
                   <option value={EquipmentType.WaterVaporEquipment}>{EquipmentType.WaterVaporEquipment}</option>
                   <option value={EquipmentType.TestingEquipment}>{EquipmentType.TestingEquipment}</option>
-                  <option value={EquipmentType.AGVCarEquipment}>{EquipmentType.AGVCarEquipment}</option>
-                  <option value={EquipmentType.CheckinEquipment}>{EquipmentType.CheckinEquipment}</option>
                 </select>
               </div>
 

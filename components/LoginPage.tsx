@@ -19,19 +19,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister }) => {
     setLoading(true);
     setError(null);
     
-    // 1. Hardcoded admin login check
-    if (username === 'admin' && password === 'Fx123456.') {
-      try {
-        // Simulate a small delay for better UX
-        await new Promise(resolve => setTimeout(resolve, 500));
-        localStorage.setItem('mes_token', 'admin_token_bypass');
-        onLogin(username);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
     // 2. API-based login for other credentials
     try {
       const response = await api.post(`${backendDomain}/api/Login/LoginSystem`, {
