@@ -92,6 +92,7 @@ export interface Equipment {
   plcReadMethod?: string;
   plcStringReverse?: boolean;
   alarmAddress?: string;
+  alarmEndAddress?: string;
   alarmAddressLength?: number;
   processAddress?: string;
   processAddressLength?: number;

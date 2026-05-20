@@ -102,9 +102,736 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, allEquipment = 
   };
 
 const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
-    { id: '1', name: '轉速配置', description: '控制主軸轉速', function: 'Read', channelNumber: 'CH1', address: 'D200', parameterBit: '0', parameterType: '主軸轉速控制',  },
-    { id: '2', name: '進給配置', description: '控制進給速度', function: 'Read', channelNumber: 'CH1', address: 'D204', parameterBit: '1', parameterType: '進給速度控制',  },
-    { id: '3', name: '壓力配置', description: '控制加工壓力', function: 'Read', channelNumber: 'CH1', address: 'D208', parameterBit: '2', parameterType: '加工壓力控制',  },
+    {
+      "id": "1",
+      "name": "Status",
+      "description": "設備狀態",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "2",
+      "name": "OKCapacity",
+      "description": "00:00-01:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "3",
+      "name": "OKCapacity",
+      "description": "01:00-02:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "4",
+      "name": "OKCapacity",
+      "description": "02:00-03:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "5",
+      "name": "OKCapacity",
+      "description": "03:00-04:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "6",
+      "name": "OKCapacity",
+      "description": "04:00-05:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "7",
+      "name": "OKCapacity",
+      "description": "05:00-06:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "8",
+      "name": "OKCapacity",
+      "description": "06:00-07:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "9",
+      "name": "OKCapacity",
+      "description": "07:00-08:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "10",
+      "name": "OKCapacity",
+      "description": "08:00-09:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "11",
+      "name": "OKCapacity",
+      "description": "09:00-10:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "12",
+      "name": "OKCapacity",
+      "description": "10:00-11:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "13",
+      "name": "OKCapacity",
+      "description": "11:00-12:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "14",
+      "name": "OKCapacity",
+      "description": "12:00-13:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "15",
+      "name": "OKCapacity",
+      "description": "13:00-14:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "16",
+      "name": "OKCapacity",
+      "description": "14:00-15:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "17",
+      "name": "OKCapacity",
+      "description": "15:00-16:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "18",
+      "name": "OKCapacity",
+      "description": "16:00-17:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "19",
+      "name": "OKCapacity",
+      "description": "17:00-18:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "20",
+      "name": "OKCapacity",
+      "description": "18:00-19:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "21",
+      "name": "OKCapacity",
+      "description": "19:00-20:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "22",
+      "name": "OKCapacity",
+      "description": "20:00-21:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "23",
+      "name": "OKCapacity",
+      "description": "21:00-22:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "24",
+      "name": "OKCapacity",
+      "description": "22:00-23:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "25",
+      "name": "OKCapacity",
+      "description": "23:00-24:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "26",
+      "name": "NGCapacity",
+      "description": "00:00-01:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "27",
+      "name": "NGCapacity",
+      "description": "01:00-02:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "28",
+      "name": "NGCapacity",
+      "description": "02:00-03:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "29",
+      "name": "NGCapacity",
+      "description": "03:00-04:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "30",
+      "name": "NGCapacity",
+      "description": "04:00-05:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "31",
+      "name": "NGCapacity",
+      "description": "05:00-06:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "32",
+      "name": "NGCapacity",
+      "description": "06:00-07:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "33",
+      "name": "NGCapacity",
+      "description": "07:00-08:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "34",
+      "name": "NGCapacity",
+      "description": "08:00-09:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "35",
+      "name": "NGCapacity",
+      "description": "09:00-10:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "36",
+      "name": "NGCapacity",
+      "description": "10:00-11:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "37",
+      "name": "NGCapacity",
+      "description": "11:00-12:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "38",
+      "name": "NGCapacity",
+      "description": "12:00-13:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "39",
+      "name": "NGCapacity",
+      "description": "13:00-14:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "40",
+      "name": "NGCapacity",
+      "description": "14:00-15:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "41",
+      "name": "NGCapacity",
+      "description": "15:00-16:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "42",
+      "name": "NGCapacity",
+      "description": "16:00-17:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "43",
+      "name": "NGCapacity",
+      "description": "17:00-18:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "44",
+      "name": "NGCapacity",
+      "description": "18:00-19:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "45",
+      "name": "NGCapacity",
+      "description": "19:00-20:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "46",
+      "name": "NGCapacity",
+      "description": "20:00-21:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "47",
+      "name": "NGCapacity",
+      "description": "21:00-22:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "48",
+      "name": "NGCapacity",
+      "description": "22:00-23:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "49",
+      "name": "NGCapacity",
+      "description": "23:00-24:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "50",
+      "name": "ThrowCapacity",
+      "description": "00:00-01:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "51",
+      "name": "ThrowCapacity",
+      "description": "01:00-02:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "52",
+      "name": "ThrowCapacity",
+      "description": "02:00-03:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "53",
+      "name": "ThrowCapacity",
+      "description": "03:00-04:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "54",
+      "name": "ThrowCapacity",
+      "description": "04:00-05:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "55",
+      "name": "ThrowCapacity",
+      "description": "05:00-06:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "56",
+      "name": "ThrowCapacity",
+      "description": "06:00-07:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "57",
+      "name": "ThrowCapacity",
+      "description": "07:00-08:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "58",
+      "name": "ThrowCapacity",
+      "description": "08:00-09:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "59",
+      "name": "ThrowCapacity",
+      "description": "09:00-10:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "60",
+      "name": "ThrowCapacity",
+      "description": "10:00-11:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "61",
+      "name": "ThrowCapacity",
+      "description": "11:00-12:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "62",
+      "name": "ThrowCapacity",
+      "description": "12:00-13:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "63",
+      "name": "ThrowCapacity",
+      "description": "13:00-14:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "64",
+      "name": "ThrowCapacity",
+      "description": "14:00-15:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "65",
+      "name": "ThrowCapacity",
+      "description": "15:00-16:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "66",
+      "name": "ThrowCapacity",
+      "description": "16:00-17:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "67",
+      "name": "ThrowCapacity",
+      "description": "17:00-18:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "68",
+      "name": "ThrowCapacity",
+      "description": "18:00-19:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "69",
+      "name": "ThrowCapacity",
+      "description": "19:00-20:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "70",
+      "name": "ThrowCapacity",
+      "description": "20:00-21:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "71",
+      "name": "ThrowCapacity",
+      "description": "21:00-22:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "72",
+      "name": "ThrowCapacity",
+      "description": "22:00-23:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "73",
+      "name": "ThrowCapacity",
+      "description": "23:00-24:00",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    }
   ]);
   
   // Database Connection States
@@ -139,10 +866,13 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
   const [draggedProcessIndex, setDraggedProcessIndex] = useState<number | null>(null);
   const [tempProcessMappings, setTempProcessMappings] = useState<ProcessMappingItem[]>([]);
   const SYSTEM_PROCESS_PARAMETERS = [
-    '工藝結果',
-    '工藝排產',
     'AGV訂單申請',
-    'AGV訂單關閉'
+    'AGV訂單管理',
+    'AGV訂單優先級修改',
+    'AGV清料請求',
+    '工藝排產',
+    '工藝信息',
+    '工藝結果'
   ];
   const [selectedProcessType, setSelectedProcessType] = useState(SYSTEM_PROCESS_PARAMETERS[0]);
   const [newProcessName, setNewProcessName] = useState('');
@@ -360,11 +1090,12 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
     rack: '0',
     slot: '2',
     alarmAddress: 'D6000',
+    alarmEndAddress: '',
     alarmAddressLength: 20,
     processAddress: '',
     processAddressLength: 0,
     processParamAddress: 'D6100',
-    processParamLength: 50,
+    processParamLength: 200,
     bitLength: '16Bits',
     alarmReadMethod: '按字讀取',
     alarmBitLength: '16Bits',
@@ -399,11 +1130,12 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
         rack: '0',
         slot: '2',
         alarmAddress: device.alarmAddress || 'D6000',
+        alarmEndAddress: device.alarmEndAddress || '',
         alarmAddressLength: device.alarmAddressLength || 20,
         processAddress: device.processAddress || '',
         processAddressLength: device.processAddressLength || 0,
         processParamAddress: device.processParamAddress || 'D6100',
-        processParamLength: device.processParamLength || 50,
+        processParamLength: device.processParamLength || 200,
         bitLength: device.bitLength || '16Bits',
         alarmReadMethod: device.alarmReadMethod || '按字讀取',
         alarmBitLength: device.alarmBitLength || '16Bits',
@@ -560,12 +1292,13 @@ const handleTestConnection = async () => {
           isReverse: formData.plcStringReverse,
           bitLength: formData.bitLength,
           alarmAddress: formData.alarmAddress,
+          alarmEndSignAdd: formData.alarmEndAddress,
           alarmAddressLength: formData.alarmAddressLength,
           processAddress: formData.processAddress,
           processAddressLength: formData.processAddressLength,
-          processParamAddress: formData.processParamAddress,
-          processParamLength: formData.processParamLength,
-          alarmReadMethod: formData.alarmReadMethod,
+          craftAdd: formData.processParamAddress,
+          craftLength: formData.processParamLength,
+          readMode: formData.alarmReadMethod,
           alarmBitLength: formData.alarmBitLength,
           processReadMethod: formData.processReadMethod,
           processBitLength: formData.processBitLength,
@@ -1422,6 +2155,16 @@ const handleTestConnection = async () => {
                             <option value="32Bits">32Bits</option>
                           </select>
                         </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-700">報警結束地址</label>
+                          <input 
+                            type="text" 
+                            value={formData.alarmEndAddress} 
+                            onChange={(e) => setFormData({...formData, alarmEndAddress: e.target.value})} 
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm" 
+                            placeholder="例如: D1020"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -1654,25 +2397,7 @@ const handleTestConnection = async () => {
             </div>
             
             <div className="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">參數名稱</label>
-                <input type="text" value={newProcessName} onChange={e => setNewProcessName(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="輸入參數名稱" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">參數描述</label>
-                <input type="text" value={newProcessDesc} onChange={e => setNewProcessDesc(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="輸入參數描述" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">參數功能</label>
-                <select value={newProcessFunc} onChange={e => setNewProcessFunc(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
-                  <option value="Read">Read</option>
-                  <option value="Write">Write</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">上料流道編號</label>
-                <input type="text" value={newProcessChannel} onChange={e => setNewProcessChannel(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="輸入流道編號" />
-              </div>
+              
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">參數類型</label>
                 <div className="border border-slate-200 rounded-lg overflow-hidden max-h-60 overflow-y-auto bg-slate-50 custom-scrollbar">

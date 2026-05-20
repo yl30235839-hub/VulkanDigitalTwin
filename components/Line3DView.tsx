@@ -618,13 +618,13 @@ const FingerprintDevice: React.FC<{
       </mesh>
       
       {/* Screen Content - Time */}
-      <Text position={[0, 0.5, 0.12]} fontSize={0.3} color="#111" anchorX="center" anchorY="middle" font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf">
+      <Text position={[0, 0.5, 0.12]} fontSize={0.3} color="#111" anchorX="center" anchorY="middle">
         11:58
       </Text>
-      <Text position={[0, 0.15, 0.12]} fontSize={0.08} color="#333" anchorX="center" anchorY="middle" font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf">
+      <Text position={[0, 0.15, 0.12]} fontSize={0.08} color="#333" anchorX="center" anchorY="middle">
         2026-04-23 星期四
       </Text>
-      <Text position={[0, -0.15, 0.12]} fontSize={0.12} color="#111" anchorX="center" anchorY="middle" font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf">
+      <Text position={[0, -0.15, 0.12]} fontSize={0.12} color="#111" anchorX="center" anchorY="middle">
         歡迎
       </Text>
       
@@ -645,7 +645,7 @@ const FingerprintDevice: React.FC<{
       </mesh>
       
       {/* Logo at bottom */}
-      <Text position={[0, -1.5, 0.11]} fontSize={0.1} color="#4ade80" anchorX="center" anchorY="middle" font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf">
+      <Text position={[0, -1.5, 0.11]} fontSize={0.1} color="#4ade80" anchorX="center" anchorY="middle">
         ZKTeco
       </Text>
     </group>
@@ -965,26 +965,51 @@ const Line3DView: React.FC<Line3DViewProps> = ({
    * HTTP POST: Run/Running Process
    */
   const handleRunClick = async () => {
-    setIsRunningLoading(true);
-    try {
-      // Using the original URL from document as requested
-      const response = await api.post(`${backendDomain}/api/Run/Running`, {});
-      
-      const { code, message } = response.data;
-      
-      if (code === 200) {
-        setIsMonitoring(!isMonitoring);
-      } else if (code === 404) {
-        alert(`運行失敗: ${message || '找不到資源 (404)'}`);
-      } else {
-        alert(`運行失敗: ${message || '未知錯誤'}`);
+    if(!isMonitoring){
+      setIsRunningLoading(true);
+      try {
+        // Using the original URL from document as requested
+        const response = await api.post(`${backendDomain}/api/Run/Running`, {});
+        
+        const { code, message } = response.data;
+        
+        if (code === 200) {
+          setIsMonitoring(!isMonitoring);
+        } else if (code === 404) {
+          alert(`運行失敗: ${message || '找不到資源 (404)'}`);
+        } else {
+          alert(`運行失敗: ${message || '未知錯誤'}`);
+        }
+      } catch (error: any) {
+        console.error("[Run API] Error:", error);
+        const errorMsg = error.response?.data?.message || error.message || "網絡錯誤，請稍後再試。";
+        alert(`運行異常: ${errorMsg}`);
+      } finally {
+        setIsRunningLoading(false);
       }
-    } catch (error: any) {
-      console.error("[Run API] Error:", error);
-      const errorMsg = error.response?.data?.message || error.message || "網絡錯誤，請稍後再試。";
-      alert(`運行異常: ${errorMsg}`);
-    } finally {
-      setIsRunningLoading(false);
+    }
+    else {
+      setIsRunningLoading(true);
+      try {
+        // Using the original URL from document as requested
+        const response = await api.post(`${backendDomain}/api/Run/Stopping`, {});
+        
+        const { code, message } = response.data;
+        
+        if (code === 200) {
+          setIsMonitoring(!isMonitoring);
+        } else if (code === 404) {
+          alert(`運行失敗: ${message || '找不到資源 (404)'}`);
+        } else {
+          alert(`運行失敗: ${message || '未知錯誤'}`);
+        }
+      } catch (error: any) {
+        console.error("[Run API] Error:", error);
+        const errorMsg = error.response?.data?.message || error.message || "網絡錯誤，請稍後再試。";
+        alert(`運行異常: ${errorMsg}`);
+      } finally {
+        setIsRunningLoading(false);
+      }
     }
   };
 
