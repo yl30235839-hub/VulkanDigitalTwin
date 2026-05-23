@@ -25,6 +25,8 @@ interface ProcessMappingItem {
   id: string;
   name?: string;
   description?: string;
+  processDataType?: string;
+  processDataLength?: number;
   function?: string;
   channelNumber?: string;
   address: string;
@@ -102,6 +104,26 @@ const DeviceSettings: React.FC<DeviceSettingsProps> = ({ device, allEquipment = 
   };
 
 const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
+    {
+      "id": "add1",
+      "name": "UpSignal",
+      "description": "上料信號",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
+    {
+      "id": "add2",
+      "name": "DownSignal",
+      "description": "下料狀態",
+      "function": "Read",
+      "channelNumber": "1",
+      "address": "DXXX",
+      "parameterBit": "0",
+      "parameterType": "設備信息"
+    },
     {
       "id": "1",
       "name": "Status",
@@ -877,6 +899,8 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
   const [selectedProcessType, setSelectedProcessType] = useState(SYSTEM_PROCESS_PARAMETERS[0]);
   const [newProcessName, setNewProcessName] = useState('');
   const [newProcessDesc, setNewProcessDesc] = useState('');
+  const [newProcessDataType, setNewProcessDataType] = useState('數值');
+  const [newProcessDataLength, setNewProcessDataLength] = useState(10);
   const [newProcessFunc, setNewProcessFunc] = useState('Read');
   const [newProcessChannel, setNewProcessChannel] = useState('');
 
@@ -1013,27 +1037,127 @@ const [processMappings, setProcessMappings] = useState<ProcessMappingItem[]>([
   };
 
   const handleAddProcessMapping = () => {
-    const newProcessId = (Date.now() + processMappings.length).toString();
-    const newMapping: ProcessMappingItem = {
-      id: newProcessId,
-      name: newProcessName,
-      description: newProcessDesc,
-      function: newProcessFunc,
-      channelNumber: newProcessChannel,
-      address: 'DXXX',
-      parameterBit: '0',
-      parameterType: selectedProcessType,
+    if (selectedProcessType === '工藝結果') {
+      const existingCount = processMappings.filter(m => m.parameterType === '工藝結果' && m.name?.startsWith('PointResultSignal')).length;
+      const nextIndex = existingCount + 1;
       
-    };
-    /* We add it to the front or back of the list, assuming we just expand the array. 
-       Usually this list displays the mapped values and empty values, in this component 
-       it's rendering based on total Length or mapped items. 
-       We will append it to processMappings. */
-    setProcessMappings([...processMappings, newMapping]);
+      const newMapping1: ProcessMappingItem = {
+        id: (Date.now()).toString(),
+        name: `PointResultSignal${nextIndex}`,
+        description: '工藝結果信號',
+        function: 'Read',
+        channelNumber: '1',
+        address: 'DXXX',
+        parameterBit: '0',
+        parameterType: '工藝結果',
+      };
+      
+      const newMapping2: ProcessMappingItem = {
+        id: (Date.now() + 1).toString(),
+        name: `PointResult${nextIndex}`,
+        description: '工藝結果值',
+        function: 'Read',
+        channelNumber: '1',
+        address: 'DXXX',
+        parameterBit: '0',
+        parameterType: '工藝結果',
+      };
+      
+      setProcessMappings([...processMappings, newMapping1, newMapping2]);
+    } else if (selectedProcessType === '工藝信息' && newProcessDataType === '數值') {
+      const existingCount = processMappings.filter(m => m.parameterType === '工藝信息' && m.name?.startsWith('NumSignal')).length;
+      const nextIndex = existingCount + 1;
+      
+      const newMapping1: ProcessMappingItem = {
+        id: (Date.now()).toString(),
+        name: `NumSignal${nextIndex}`,
+        description: '工藝數值信號',
+        function: 'Read',
+        channelNumber: '1',
+        address: 'DXXX',
+        parameterBit: '0',
+        parameterType: '工藝信息',
+      };
+      
+      const newMapping2: ProcessMappingItem = {
+        id: (Date.now() + 1).toString(),
+        name: `NumValue${nextIndex}`,
+        description: '工藝數值',
+        function: 'Read',
+        channelNumber: '1',
+        address: 'DXXX',
+        parameterBit: '0',
+        parameterType: '工藝信息',
+      };
+      
+      setProcessMappings([...processMappings, newMapping1, newMapping2]);
+    } else if (selectedProcessType === '工藝信息' && newProcessDataType === '字符串') {
+      const existingCount = processMappings.filter(m => m.parameterType === '工藝信息' && m.name?.startsWith('StringSignal')).length;
+      const nextIndex = existingCount + 1;
+      
+      const newMapping1: ProcessMappingItem = {
+        id: (Date.now()).toString(),
+        name: `StringSignal${nextIndex}`,
+        description: '工藝字符串信號',
+        function: 'Read',
+        channelNumber: '1',
+        address: 'DXXX',
+        parameterBit: '0',
+        parameterType: '工藝信息',
+      };
+      
+      const stringValueMappings: ProcessMappingItem[] = Array.from({ length: newProcessDataLength }).map((_, idx) => ({
+        id: (Date.now() + 1 + idx).toString(),
+        name: `StringValue${nextIndex}`,
+        description: '工藝字符串',
+        function: 'Read',
+        channelNumber: '1',
+        address: 'DXXX',
+        parameterBit: '0',
+        parameterType: '工藝信息',
+      }));
+      
+      setProcessMappings([...processMappings, newMapping1, ...stringValueMappings]);
+    } else if (selectedProcessType === '工藝排產') {
+      const existingCount = processMappings.filter(m => m.parameterType === '工藝排產' && m.name?.startsWith('PointExecute')).length;
+      const nextIndex = existingCount + 1;
+      
+      const newMapping: ProcessMappingItem = {
+        id: (Date.now()).toString(),
+        name: `PointExecute${nextIndex}`,
+        description: '工藝排產點位',
+        function: 'Write',
+        channelNumber: '1',
+        address: 'DXXX',
+        parameterBit: '0',
+        parameterType: '工藝排產',
+      };
+      
+      setProcessMappings([...processMappings, newMapping]);
+    } else {
+      const newProcessId = (Date.now() + processMappings.length).toString();
+      const newMapping: ProcessMappingItem = {
+        id: newProcessId,
+        name: newProcessName,
+        description: newProcessDesc,
+        processDataType: selectedProcessType === '工藝信息' ? newProcessDataType : undefined,
+        processDataLength: selectedProcessType === '工藝信息' && newProcessDataType === '字符串' ? newProcessDataLength : undefined,
+        function: newProcessFunc,
+        channelNumber: newProcessChannel,
+        address: 'DXXX',
+        parameterBit: '0',
+        parameterType: selectedProcessType,
+        
+      };
+      setProcessMappings([...processMappings, newMapping]);
+    }
+
     setIsProcessModalOpen(false);
     setSelectedProcessType(SYSTEM_PROCESS_PARAMETERS[0]);
     setNewProcessName('');
     setNewProcessDesc('');
+    setNewProcessDataType('數值');
+    setNewProcessDataLength(10);
     setNewProcessFunc('Read');
     setNewProcessChannel('');
   };
@@ -1276,6 +1400,17 @@ const handleTestConnection = async () => {
         } else if (device.type === EquipmentType.WaterVaporEquipment) {
           endpoint = `${backendDomain}/api/Equipment/WEMaintenance`;
         }
+        
+        const craftsPayload = processMappings.map(item => ({
+          name: item.name || '',
+          description: item.description || '',
+          function: item.function || '',
+          channelNumber: item.channelNumber || '',
+          address: item.address || '',
+          parameterBit: item.parameterBit || '',
+          parameterType: item.parameterType || ''
+        }));
+
         const response = await api.post(endpoint, {
           lineSystemName: device.lineId,
           equipmentSystemName: device.id,
@@ -1305,7 +1440,8 @@ const handleTestConnection = async () => {
           agvOrderRequestUrl: formData.agvOrderRequestUrl,
           agvOrderEndUrl: formData.agvOrderEndUrl,
           agvOrderPriorityUrl: formData.agvOrderPriorityUrl,
-          agvOrderClearUrl: formData.agvOrderClearUrl
+          agvOrderClearUrl: formData.agvOrderClearUrl,
+          crafts: craftsPayload
         });
 
         if (response.data.code === 200) {
@@ -2424,6 +2560,50 @@ const handleTestConnection = async () => {
                 </div>
                 <p className="text-xs text-slate-500">請選擇需要加入的工藝參數類型。</p>
               </div>
+
+              {selectedProcessType === '工藝信息' && (
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">數據類型</label>
+                    <div className="flex space-x-4">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input 
+                          type="radio" 
+                          name="dataType" 
+                          value="數值" 
+                          checked={newProcessDataType === '數值'}
+                          onChange={() => setNewProcessDataType('數值')}
+                          className="text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm text-slate-700">數值</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input 
+                          type="radio" 
+                          name="dataType" 
+                          value="字符串" 
+                          checked={newProcessDataType === '字符串'}
+                          onChange={() => setNewProcessDataType('字符串')}
+                          className="text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm text-slate-700">字符串</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {newProcessDataType === '字符串' && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <label className="text-sm font-semibold text-slate-700">讀取長度</label>
+                      <input 
+                        type="number" 
+                        value={newProcessDataLength}
+                        onChange={(e) => setNewProcessDataLength(parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
