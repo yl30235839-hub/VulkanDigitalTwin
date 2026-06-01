@@ -1,26 +1,25 @@
-
 export enum MachineStatus {
-  Running = 'RUNNING',
-  Stopped = 'STOPPED',
-  Warning = 'WARNING',
-  Maintenance = 'MAINTENANCE'
+  Running = "RUNNING",
+  Stopped = "STOPPED",
+  Warning = "WARNING",
+  Maintenance = "MAINTENANCE",
 }
 
 export enum LineType {
-  NVIDIA = 'VKLine_NVIDIA',
-  APPLE = 'VKLine_APPLE',
-  ORACLE = 'VKLine_Oracle',
-  MICROSOFT = 'VKLine_Microsoft',
-  META = 'VKLine_Meta'
+  NVIDIA = "VKLine_NVIDIA",
+  APPLE = "VKLine_APPLE",
+  ORACLE = "VKLine_Oracle",
+  MICROSOFT = "VKLine_Microsoft",
+  META = "VKLine_Meta",
 }
 
 export enum EquipmentType {
-  AssemblyEquipment = '組裝設備',
-  AGVCarEquipment = 'AGV小車',
-  CheckinEquipment = '打卡設備',
-  TestingEquipment = '檢測設備',
-  WaterVaporEquipment = '水氣防設備',
-  TVDashboard = '數字看板'
+  AssemblyEquipment = "組裝設備",
+  AGVCarEquipment = "AGV小車",
+  CheckinEquipment = "打卡設備",
+  TestingEquipment = "檢測設備",
+  WaterVaporEquipment = "水氣防設備",
+  TVDashboard = "數字看板",
 }
 
 export interface Factory {
@@ -45,14 +44,14 @@ export interface ProductionLine {
 }
 
 export enum StorageRequestType {
-  Loading = '上料',
-  Unloading = '下料'
+  Loading = "上料",
+  Unloading = "下料",
 }
 
 export enum StoragePriority {
-  Normal = '正常',
-  Urgent = '緊急',
-  VeryUrgent = '非常緊急'
+  Normal = "正常",
+  Urgent = "緊急",
+  VeryUrgent = "非常緊急",
 }
 
 export interface StorageLocation {
@@ -63,6 +62,8 @@ export interface StorageLocation {
   lineId: string;
   priority: StoragePriority;
   quantity: number;
+  orderAddress?: string;
+  replyAddress?: string;
 }
 
 export interface Equipment {
@@ -150,7 +151,18 @@ export interface UserData {
   FingerExist?: boolean;
 }
 
-export type PageView = 'LOGIN' | 'REGISTER' | 'LINES' | 'EQUIPMENT' | '3D_VIEW' | 'DEVICE_SETTINGS' | 'ATTENDANCE_MAINTENANCE' | 'FACA_MANAGEMENT' | 'YIELD_ANALYSIS' | 'INTELLIGENT_MONITORING' | 'SCRAP_RATE_ANALYSIS';
+export type PageView =
+  | "LOGIN"
+  | "REGISTER"
+  | "LINES"
+  | "EQUIPMENT"
+  | "3D_VIEW"
+  | "DEVICE_SETTINGS"
+  | "ATTENDANCE_MAINTENANCE"
+  | "FACA_MANAGEMENT"
+  | "YIELD_ANALYSIS"
+  | "INTELLIGENT_MONITORING"
+  | "SCRAP_RATE_ANALYSIS";
 
 export interface AlarmRecordModel {
   AlarmCode: string;
@@ -180,5 +192,5 @@ export interface FACAPendingItem {
   equipmentSystemName: string;
   alarmCode: string;
   alarmContent: string;
-  status: 'AWAITING' | 'ANALYZING' | 'COMPLETED';
+  status: "AWAITING" | "ANALYZING" | "COMPLETED";
 }
